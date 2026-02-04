@@ -6,7 +6,7 @@ const fs = require('fs');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const BankAccount = require('../models/BankAccount');
-const { protect } = require('../middleware/auth');
+const { protect } = require('../middleware/betterAuthMiddleware');
 const { validate } = require('../middleware/validate');
 
 // Configure multer for CSV upload

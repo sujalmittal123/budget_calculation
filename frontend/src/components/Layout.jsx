@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import {
   FiHome,
@@ -14,13 +14,37 @@ import {
   FiSun,
   FiMoon,
   FiUser,
+  FiBook,
+  FiChevronDown,
 } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+import api from '../services/api';
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+];
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
+  const { user, logout, updateProfile } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
+
+  const currentCurrency = CURRENCIES.find(c => c.code === user?.preferences?.currency) || CURRENCIES[0];
+
+  const handleCurrencyChange = async (currencyCode) => {
+    try {
+      await updateProfile({ preferences: { ...user.preferences, currency: currencyCode } });
+      setCurrencyDropdownOpen(false);
+      toast.success(`Currency changed to ${currencyCode}`);
+    } catch (error) {
+      toast.error('Failed to update currency');
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -31,6 +55,7 @@ const Layout = () => {
     { path: '/dashboard', icon: FiHome, label: 'Dashboard' },
     { path: '/transactions', icon: FiDollarSign, label: 'Transactions' },
     { path: '/bank-accounts', icon: FiCreditCard, label: 'Bank Accounts' },
+    { path: '/daily-notes', icon: FiBook, label: 'Daily Notes' },
     { path: '/reports', icon: FiPieChart, label: 'Reports' },
     { path: '/settings', icon: FiSettings, label: 'Settings' },
   ];
@@ -40,14 +65,14 @@ const Layout = () => {
       to={path}
       onClick={() => setSidebarOpen(false)}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+        `group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ease-out transform hover:translate-x-1 ${
           isActive
-            ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 scale-[1.02]'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:shadow-md'
         }`
       }
     >
-      <Icon className="w-5 h-5" />
+      <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
       <span className="font-medium">{label}</span>
     </NavLink>
   );
@@ -71,12 +96,12 @@ const Layout = () => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">
-              💰 BudgetTracker
+            <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400 transition-all duration-300 hover:scale-105 cursor-default">
+              <span className="inline-block animate-float">💰</span> BudgetTracker
             </h1>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:rotate-90"
             >
               <FiX className="w-5 h-5" />
             </button>
@@ -106,9 +131,9 @@ const Layout = () => {
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 w-full px-4 py-2 text-danger-500 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-500/10 transition-colors"
+              className="group flex items-center gap-3 w-full px-4 py-2 text-danger-500 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-500/10 transition-all duration-300 hover:translate-x-1"
             >
-              <FiLogOut className="w-5 h-5" />
+              <FiLogOut className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />
               <span className="font-medium">Logout</span>
             </button>
           </div>
@@ -128,16 +153,60 @@ const Layout = () => {
             </button>
 
             <div className="flex items-center gap-4 ml-auto">
+              {/* Currency Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setCurrencyDropdownOpen(!currencyDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600"
+                >
+                  <span className="text-lg font-semibold">{currentCurrency.symbol}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline">{currentCurrency.code}</span>
+                  <FiChevronDown className={`w-4 h-4 transition-transform ${currencyDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {currencyDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setCurrencyDropdownOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                        Select Currency
+                      </div>
+                      {CURRENCIES.map((currency) => (
+                        <button
+                          key={currency.code}
+                          onClick={() => handleCurrencyChange(currency.code)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                            currentCurrency.code === currency.code ? 'bg-primary-50 dark:bg-primary-900/30' : ''
+                          }`}
+                        >
+                          <span className="text-xl w-6">{currency.symbol}</span>
+                          <div className="text-left">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{currency.code}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{currency.name}</div>
+                          </div>
+                          {currentCurrency.code === currency.code && (
+                            <span className="ml-auto text-primary-600">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* Dark Mode Toggle */}
               <button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 hover:scale-110 active:scale-95"
                 aria-label="Toggle dark mode"
               >
                 {darkMode ? (
-                  <FiSun className="w-5 h-5 text-yellow-500" />
+                  <FiSun className="w-5 h-5 text-yellow-500 transition-transform duration-500 hover:rotate-180" />
                 ) : (
-                  <FiMoon className="w-5 h-5 text-gray-600" />
+                  <FiMoon className="w-5 h-5 text-gray-600 transition-transform duration-500 hover:-rotate-12" />
                 )}
               </button>
             </div>
@@ -146,7 +215,9 @@ const Layout = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
-          <Outlet />
+          <div className="animate-fade-in-up">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

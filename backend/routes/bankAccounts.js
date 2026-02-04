@@ -3,7 +3,7 @@ const { body, param } = require('express-validator');
 const router = express.Router();
 const BankAccount = require('../models/BankAccount');
 const Transaction = require('../models/Transaction');
-const { protect } = require('../middleware/auth');
+const { protect } = require('../middleware/betterAuthMiddleware');
 const { validate } = require('../middleware/validate');
 
 // All routes are protected

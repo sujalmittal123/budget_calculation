@@ -7,6 +7,7 @@ import {
   FiCreditCard,
   FiAlertCircle,
   FiArrowRight,
+  FiActivity,
 } from 'react-icons/fi';
 import {
   AreaChart,
@@ -23,11 +24,18 @@ import {
   Bar,
   Legend,
 } from 'recharts';
-import { dashboardAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { dashboardAPI, dailyNotesAPI } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+
+const CURRENCIES = {
+  USD: { symbol: '$', locale: 'en-US' },
+  INR: { symbol: '₹', locale: 'en-IN' },
+  EUR: { symbol: '€', locale: 'de-DE' },
+  GBP: { symbol: '£', locale: 'en-GB' },
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -37,6 +45,10 @@ const Dashboard = () => {
   const [monthlyTrend, setMonthlyTrend] = useState([]);
   const [bankSummary, setBankSummary] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [burnRate, setBurnRate] = useState(null);
+
+  const userCurrency = user?.preferences?.currency || 'USD';
+  const currencyConfig = CURRENCIES[userCurrency] || CURRENCIES.USD;
 
   useEffect(() => {
     fetchDashboardData();
@@ -45,12 +57,13 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [summaryRes, categoryRes, trendRes, bankRes, recentRes] = await Promise.all([
+      const [summaryRes, categoryRes, trendRes, bankRes, recentRes, burnRateRes] = await Promise.all([
         dashboardAPI.getSummary(),
         dashboardAPI.getCategoryBreakdown(),
         dashboardAPI.getMonthlyTrend(),
         dashboardAPI.getBankSummary(),
         dashboardAPI.getRecentTransactions(5),
+        dailyNotesAPI.getBurnRate(),
       ]);
 
       setSummary(summaryRes.data.data);
@@ -58,6 +71,7 @@ const Dashboard = () => {
       setMonthlyTrend(trendRes.data.data);
       setBankSummary(bankRes.data.data);
       setRecentTransactions(recentRes.data.data);
+      setBurnRate(burnRateRes.data.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
       console.error(error);
@@ -69,12 +83,12 @@ const Dashboard = () => {
   const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899'];
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(currencyConfig.locale, {
       style: 'currency',
-      currency: 'USD',
+      currency: userCurrency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(value || 0);
   };
 
   if (loading) {
@@ -86,12 +100,12 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in-up">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {user?.name?.split(' ')[0]}! 👋
+            Welcome back, {user?.name?.split(' ')[0]}! <span className="inline-block animate-wiggle">👋</span>
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Here's your financial overview for this month
@@ -101,8 +115,8 @@ const Dashboard = () => {
 
       {/* Budget Alert */}
       {summary?.isOverBudget && (
-        <div className="bg-danger-50 dark:bg-danger-500/10 border border-danger-200 dark:border-danger-500/30 rounded-xl p-4 flex items-center gap-3">
-          <FiAlertCircle className="w-6 h-6 text-danger-500 flex-shrink-0" />
+        <div className="bg-danger-50 dark:bg-danger-500/10 border border-danger-200 dark:border-danger-500/30 rounded-xl p-4 flex items-center gap-3 animate-bounce-in">
+          <FiAlertCircle className="w-6 h-6 text-danger-500 flex-shrink-0 animate-pulse" />
           <div>
             <p className="font-medium text-danger-600 dark:text-danger-400">
               You've exceeded your monthly budget!
@@ -116,36 +130,36 @@ const Dashboard = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger">
         {/* Income Card */}
-        <div className="card p-6">
+        <div className="card p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Monthly Income
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 count-up">
                 {formatCurrency(summary?.monthly?.income || 0)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-success-100 dark:bg-success-500/20 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-success-100 dark:bg-success-500/20 rounded-xl flex items-center justify-center transition-transform duration-300 hover:scale-110">
               <FiTrendingUp className="w-6 h-6 text-success-600 dark:text-success-400" />
             </div>
           </div>
         </div>
 
         {/* Expense Card */}
-        <div className="card p-6">
+        <div className="card p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Monthly Expenses
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 count-up">
                 {formatCurrency(summary?.monthly?.expense || 0)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-danger-100 dark:bg-danger-500/20 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-danger-100 dark:bg-danger-500/20 rounded-xl flex items-center justify-center transition-transform duration-300 hover:scale-110">
               <FiTrendingDown className="w-6 h-6 text-danger-600 dark:text-danger-400" />
             </div>
           </div>
@@ -157,9 +171,9 @@ const Dashboard = () => {
                   {summary?.budgetUsedPercent}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                 <div
-                  className={`h-2 rounded-full transition-all ${
+                  className={`h-2 rounded-full transition-all duration-1000 ease-out ${
                     summary?.isOverBudget ? 'bg-danger-500' : 'bg-primary-500'
                   }`}
                   style={{ width: `${Math.min(summary?.budgetUsedPercent || 0, 100)}%` }}
@@ -170,13 +184,13 @@ const Dashboard = () => {
         </div>
 
         {/* Balance Card */}
-        <div className="card p-6">
+        <div className="card p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Monthly Balance
               </p>
-              <p className={`text-2xl font-bold mt-1 ${
+              <p className={`text-2xl font-bold mt-1 count-up ${
                 (summary?.monthly?.balance || 0) >= 0 
                   ? 'text-success-600 dark:text-success-400' 
                   : 'text-danger-600 dark:text-danger-400'
@@ -184,29 +198,77 @@ const Dashboard = () => {
                 {formatCurrency(summary?.monthly?.balance || 0)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-500/20 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-500/20 rounded-xl flex items-center justify-center transition-transform duration-300 hover:scale-110">
               <FiDollarSign className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
 
         {/* Total Bank Balance Card */}
-        <div className="card p-6">
+        <div className="card p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Total Bank Balance
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 count-up">
                 {formatCurrency(summary?.totalBankBalance || 0)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center transition-transform duration-300 hover:scale-110">
               <FiCreditCard className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Burn Rate Section */}
+      {burnRate && (
+        <div className="card p-6 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-orange-200 dark:border-orange-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <FiActivity className="w-5 h-5 text-orange-500" />
+              Monthly Burn Rate
+            </h3>
+            <Link
+              to="/daily-notes"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+            >
+              View Details <FiArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Daily Burn Rate</p>
+              <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                {formatCurrency(burnRate.averageDailyBurn)}
+              </p>
+              <p className="text-xs text-gray-400">per day avg</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Projected Monthly</p>
+              <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                {formatCurrency(burnRate.projectedMonthlyExpense)}
+              </p>
+              <p className="text-xs text-gray-400">{burnRate.remainingDays} days left</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total Spent</p>
+              <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                {formatCurrency(burnRate.totalExpense)}
+              </p>
+              <p className="text-xs text-gray-400">this month</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Active Days</p>
+              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                {burnRate.daysWithExpense}/{burnRate.daysElapsed}
+              </p>
+              <p className="text-xs text-gray-400">days tracked</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

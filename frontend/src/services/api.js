@@ -1,19 +1,26 @@
 import axios from 'axios';
 
+/**
+ * Axios API Configuration
+ * 
+ * Updated for Better-Auth with HTTPOnly cookies.
+ * No longer uses Authorization headers - sessions handled by cookies.
+ */
+
 const api = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
+  // CRITICAL: Enable credentials to send HTTPOnly cookies
+  withCredentials: true,
 });
 
-// Request interceptor
+// Request interceptor - no longer adds Authorization header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // HTTPOnly cookies are automatically sent by the browser
+    // No manual token handling needed
     return config;
   },
   (error) => {
@@ -21,25 +28,24 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor - handle 401 errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      // Session expired or invalid, redirect to login
+      console.log('[API] 401 Unauthorized - redirecting to login');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-// Auth API
+// Auth API - Simplified (Better-Auth handles most auth operations)
 export const authAPI = {
-  login: (data) => api.post('/auth/login', data),
-  register: (data) => api.post('/auth/register', data),
-  getMe: () => api.get('/auth/me'),
+  // These endpoints still exist for profile management
   updateProfile: (data) => api.put('/auth/profile', data),
-  changePassword: (data) => api.put('/auth/password', data),
+  // Note: login, register, and Google OAuth are now handled by Better-Auth endpoints
 };
 
 // Bank Accounts API
@@ -73,6 +79,15 @@ export const dashboardAPI = {
   getBankSummary: () => api.get('/dashboard/bank-summary'),
   getRecentTransactions: (limit) => api.get('/dashboard/recent-transactions', { params: { limit } }),
   getPaymentMethodBreakdown: (params) => api.get('/dashboard/payment-method-breakdown', { params }),
+};
+
+// Daily Notes API
+export const dailyNotesAPI = {
+  getAll: (params) => api.get('/daily-notes', { params }),
+  getByDate: (date) => api.get(`/daily-notes/${date}`),
+  create: (data) => api.post('/daily-notes', data),
+  delete: (date) => api.delete(`/daily-notes/${date}`),
+  getBurnRate: (params) => api.get('/daily-notes/stats/burn-rate', { params }),
 };
 
 // Export API

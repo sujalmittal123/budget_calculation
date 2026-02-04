@@ -1,8 +1,19 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+
+/**
+ * User Model - Compatible with Better-Auth
+ * 
+ * This model has been updated to work with Better-Auth while maintaining
+ * backward compatibility with existing budget tracking features.
+ * 
+ * Better-Auth will automatically manage:
+ * - Authentication sessions (in 'session' collection)
+ * - OAuth accounts (in 'account' collection)
+ * - Email verification (in 'verification' collection)
+ */
 
 const UserSchema = new mongoose.Schema({
+  // Basic user information (Better-Auth compatible)
   name: {
     type: String,
     required: [true, 'Please provide a name'],
@@ -20,12 +31,20 @@ const UserSchema = new mongoose.Schema({
       'Please provide a valid email'
     ]
   },
-  password: {
-    type: String,
-    required: [true, 'Please provide a password'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false
+  
+  // Better-Auth fields
+  emailVerified: {
+    type: Date,
+    default: null,
+    // Google OAuth users have pre-verified emails
   },
+  image: {
+    type: String,
+    default: null,
+    // Stores Google profile picture or custom avatar
+  },
+  
+  // Budget Tracker specific fields
   monthlyBudgetLimit: {
     type: Number,
     default: 0
@@ -37,34 +56,34 @@ const UserSchema = new mongoose.Schema({
     },
     currency: {
       type: String,
-      default: 'USD'
+      default: 'INR'
     }
   },
+  
+  // Timestamps
   createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Hash password before saving
-UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
-  }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+// Update timestamp on save
+UserSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
 });
 
-// Sign JWT and return
-UserSchema.methods.getSignedJwtToken = function() {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
-  });
-};
+// Virtual for checking if user has verified email
+UserSchema.virtual('isEmailVerified').get(function() {
+  return this.emailVerified !== null;
+});
 
-// Match user entered password to hashed password in database
-UserSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+// Ensure virtuals are included in JSON
+UserSchema.set('toJSON', { virtuals: true });
+UserSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('User', UserSchema);

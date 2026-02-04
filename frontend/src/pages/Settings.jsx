@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FiUser, FiLock, FiDollarSign, FiMoon, FiSun, FiSave } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';

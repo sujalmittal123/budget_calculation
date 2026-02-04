@@ -57,6 +57,18 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const googleLogin = async (credential) => {
+    const response = await api.post('/auth/google', { credential });
+    const { token: newToken, user: userData } = response.data;
+    
+    localStorage.setItem('token', newToken);
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    setToken(newToken);
+    setUser(userData);
+    
+    return response.data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
@@ -77,6 +89,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     login,
     register,
+    googleLogin,
     logout,
     updateProfile,
   };
