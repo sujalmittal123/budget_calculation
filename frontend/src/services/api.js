@@ -7,8 +7,13 @@ import axios from 'axios';
  * No longer uses Authorization headers - sessions handled by cookies.
  */
 
+// In production, use the environment variable; in development, use proxy
+const baseURL = import.meta.env.PROD 
+  ? import.meta.env.VITE_API_URL || '/api'
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

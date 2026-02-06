@@ -1,0 +1,61 @@
+services:
+  # Backend API Service
+  - type: web
+    name: budget-tracker-backend
+    env: node
+    region: oregon
+    buildCommand: npm install && npm run build-ts || true
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false  # Set in Render Dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: FRONTEND_URL
+        sync: false  # Set to your frontend URL
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Set in Render Dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Set in Render Dashboard
+      - key: GOOGLE_REDIRECT_URI
+        sync: false  # Set in Render Dashboard
+    rootDir: backend
+
+  # Frontend Static Site
+  - type: web
+    name: budget-tracker-frontend
+    env: static
+    region: oregon
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Set to backend URL
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false  # Same as backend GOOGLE_CLIENT_ID
+    rootDir: frontend
+
+databases:
+  # MongoDB - Note: Render doesn't provide MongoDB directly
+  # You'll need to use MongoDB Atlas or another provider
+  # and set the MONGODB_URI in environment variables
