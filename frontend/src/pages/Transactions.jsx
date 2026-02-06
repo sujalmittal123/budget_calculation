@@ -16,8 +16,13 @@ import { transactionsAPI, bankAccountsAPI, exportAPI } from '../services/api';
 import Modal from '../components/Modal';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
+import { getCategoriesByType, getSubcategories, getCategoryIcon, getCategoryColor } from '../constants/categories';
+import { formatCurrency as formatCurrencyUtil } from '../utils/currency';
+import { useAuth } from '../hooks/useAuth';
 
 const Transactions = () => {
+  const { user } = useAuth();
+  const userCurrency = user?.preferences?.currency || 'USD';
   const [transactions, setTransactions] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +46,8 @@ const Transactions = () => {
   const [formData, setFormData] = useState({
     bankId: '',
     type: 'expense',
-    category: 'personal',
+    category: '',
+    subcategory: '',
     amount: '',
     description: '',
     paymentMethod: 'card',
@@ -58,7 +64,6 @@ const Transactions = () => {
       const response = await bankAccountsAPI.getAll();
       setBankAccounts(response.data.data);
     } catch (error) {
-      console.error('Error fetching bank accounts:', error);
     }
   };
 
@@ -118,6 +123,7 @@ const Transactions = () => {
       bankId: transaction.bankId?._id || transaction.bankId,
       type: transaction.type,
       category: transaction.category,
+      subcategory: transaction.subcategory || '',
       amount: transaction.amount.toString(),
       description: transaction.description || '',
       paymentMethod: transaction.paymentMethod,
@@ -132,11 +138,29 @@ const Transactions = () => {
     setFormData({
       bankId: bankAccounts[0]?._id || '',
       type: 'expense',
-      category: 'personal',
+      category: '',
+      subcategory: '',
       amount: '',
       description: '',
       paymentMethod: 'card',
       date: format(new Date(), 'yyyy-MM-dd'),
+    });
+  };
+
+  const handleTypeChange = (newType) => {
+    setFormData({
+      ...formData,
+      type: newType,
+      category: '',
+      subcategory: '',
+    });
+  };
+
+  const handleCategoryChange = (newCategory) => {
+    setFormData({
+      ...formData,
+      category: newCategory,
+      subcategory: '',
     });
   };
 
@@ -198,12 +222,7 @@ const Transactions = () => {
     e.target.value = '';
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
+  const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
 
@@ -321,10 +340,22 @@ const Transactions = () => {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <span className={`badge-${transaction.category}`}>
-                            {transaction.category}
-                          </span>
-                          <span className={`badge-${transaction.type}`}>
+                          {(() => {
+                            const Icon = getCategoryIcon(transaction.category);
+                            const color = getCategoryColor(transaction.category);
+                            return Icon ? <Icon className="w-4 h-4" style={{ color }} /> : null;
+                          })()}
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm text-gray-900 dark:text-white">
+                              {transaction.category}
+                            </span>
+                            {transaction.subcategory && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {transaction.subcategory}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`badge-${transaction.type} ml-2`}>
                             {transaction.type}
                           </span>
                         </div>
@@ -403,7 +434,7 @@ const Transactions = () => {
               <label className="label">Type</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => handleTypeChange(e.target.value)}
                 className="input"
               >
                 <option value="income">Income</option>
@@ -414,31 +445,38 @@ const Transactions = () => {
               <label className="label">Category</label>
               <select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="input"
+                required
               >
-                <option value="personal">Personal</option>
-                <option value="business">Business</option>
+                <option value="">Select Category</option>
+                {getCategoriesByType(formData.type).map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          <div>
-            <label className="label">Bank Account</label>
-            <select
-              value={formData.bankId}
-              onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
-              className="input"
-              required
-            >
-              <option value="">Select Bank Account</option>
-              {bankAccounts.map((bank) => (
-                <option key={bank._id} value={bank._id}>
-                  {bank.bankName} ({bank.accountNumber})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Subcategory - Only show if category has subcategories */}
+          {formData.category && getSubcategories(formData.category).length > 0 && (
+            <div>
+              <label className="label">Subcategory (Optional)</label>
+              <select
+                value={formData.subcategory}
+                onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                className="input"
+              >
+                <option value="">Select Subcategory</option>
+                {getSubcategories(formData.category).map((sub) => (
+                  <option key={sub} value={sub}>
+                    {sub}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -470,7 +508,15 @@ const Transactions = () => {
             <label className="label">Payment Method</label>
             <select
               value={formData.paymentMethod}
-              onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+              onChange={(e) => {
+                const method = e.target.value;
+                setFormData({ 
+                  ...formData, 
+                  paymentMethod: method,
+                  // Clear bankId if cash is selected
+                  bankId: method === 'cash' ? '' : formData.bankId || bankAccounts[0]?._id || ''
+                });
+              }}
               className="input"
             >
               <option value="card">Card</option>
@@ -481,6 +527,26 @@ const Transactions = () => {
               <option value="other">Other</option>
             </select>
           </div>
+
+          {/* Bank Account - Only required if not cash */}
+          {formData.paymentMethod !== 'cash' && (
+            <div>
+              <label className="label">Bank Account</label>
+              <select
+                value={formData.bankId}
+                onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Select Bank Account</option>
+                {bankAccounts.map((bank) => (
+                  <option key={bank._id} value={bank._id}>
+                    {bank.bankName} ({bank.accountNumber})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="label">Description</label>
@@ -529,6 +595,19 @@ const Transactions = () => {
           </div>
 
           <div>
+            <label className="label">Type</label>
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value, category: '' })}
+              className="input"
+            >
+              <option value="">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+
+          <div>
             <label className="label">Category</label>
             <select
               value={filters.category}
@@ -536,21 +615,30 @@ const Transactions = () => {
               className="input"
             >
               <option value="">All Categories</option>
-              <option value="personal">Personal</option>
-              <option value="business">Business</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="label">Type</label>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              className="input"
-            >
-              <option value="">All Types</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
+              {filters.type ? (
+                getCategoriesByType(filters.type).map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <optgroup label="Income">
+                    {getCategoriesByType('income').map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Expense">
+                    {getCategoriesByType('expense').map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                </>
+              )}
             </select>
           </div>
 

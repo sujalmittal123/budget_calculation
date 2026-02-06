@@ -17,6 +17,7 @@ import { dailyNotesAPI, transactionsAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency';
 import {
   AreaChart,
   Area,
@@ -37,15 +38,9 @@ const MOODS = [
   { value: 'terrible', label: 'Terrible', emoji: '😢', color: 'text-red-500' },
 ];
 
-const CURRENCIES = {
-  USD: '$',
-  INR: '₹',
-  EUR: '€',
-  GBP: '£',
-};
-
 const DailyNotes = () => {
   const { user } = useAuth();
+  const userCurrency = user?.preferences?.currency || 'USD';
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,7 +56,8 @@ const DailyNotes = () => {
   const [newHighlight, setNewHighlight] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  const currencySymbol = CURRENCIES[user?.preferences?.currency] || '$';
+  const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
+  const currencySymbol = getCurrencySymbol(userCurrency);
 
   useEffect(() => {
     fetchDailyData();
@@ -96,7 +92,6 @@ const DailyNotes = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching daily data:', error);
     } finally {
       setLoading(false);
     }
@@ -107,7 +102,6 @@ const DailyNotes = () => {
       const response = await dailyNotesAPI.getBurnRate();
       setBurnRate(response.data.data);
     } catch (error) {
-      console.error('Error fetching burn rate:', error);
     }
   };
 
@@ -147,8 +141,6 @@ const DailyNotes = () => {
       highlights: prev.highlights.filter((_, i) => i !== index),
     }));
   };
-
-  const formatCurrency = (value) => `${currencySymbol}${(value || 0).toLocaleString()}`;
 
   if (loading) {
     return (

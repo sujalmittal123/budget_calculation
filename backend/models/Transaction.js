@@ -9,7 +9,8 @@ const TransactionSchema = new mongoose.Schema({
   bankId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'BankAccount',
-    required: [true, 'Please select a bank account']
+    required: false, // Optional for cash transactions
+    default: null
   },
   type: {
     type: String,
@@ -18,7 +19,15 @@ const TransactionSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['personal', 'business'],
+    enum: [
+      // Old categories (for backward compatibility - to be migrated)
+      'personal', 'business',
+      // Income categories
+      'Salary', 'Freelance', 'Investment', 'Gift', 'Other Income',
+      // Expense categories
+      'Food & Dining', 'Transportation', 'Shopping', 'Entertainment',
+      'Bills & Utilities', 'Healthcare', 'Education', 'Rent', 'Insurance', 'Other Expense'
+    ],
     required: [true, 'Please specify category']
   },
   subcategory: {
@@ -83,12 +92,15 @@ TransactionSchema.pre('save', function(next) {
 
 // Update bank balance after transaction is saved
 TransactionSchema.post('save', async function() {
-  await this.constructor.updateBankBalance(this.bankId);
+  // Only update bank balance if bankId exists (not null for cash transactions)
+  if (this.bankId) {
+    await this.constructor.updateBankBalance(this.bankId);
+  }
 });
 
 // Update bank balance after transaction is removed
 TransactionSchema.post('findOneAndDelete', async function(doc) {
-  if (doc) {
+  if (doc && doc.bankId) {
     await doc.constructor.updateBankBalance(doc.bankId);
   }
 });

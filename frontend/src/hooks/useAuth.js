@@ -1,13 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { authClient } from '../lib/authClient';
+import { authService } from '../services/auth';
+import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 /**
  * Custom Hook for Authentication
  * 
  * Provides a clean API for authentication operations.
- * Integrates Better-Auth with Zustand store.
+ * Uses session-based auth with Google OAuth.
  * 
  * Usage:
  * ```jsx
@@ -15,10 +16,9 @@ import toast from 'react-hot-toast';
  * ```
  */
 
-// API base URL - use relative URLs in development (proxied by Vite)
-const API_BASE = import.meta.env.PROD 
-  ? import.meta.env.VITE_API_URL || 'http://localhost:5000'
-  : 'http://localhost:5000';
+// Global flag to prevent multiple auth initializations
+let authInitialized = false;
+let authInitializing = false;
 
 export const useAuth = () => {
   const {
@@ -33,53 +33,56 @@ export const useAuth = () => {
     clearAuth,
     updateUserProfile,
   } = useAuthStore();
+  
+  const initRef = useRef(false);
 
   // Initialize auth session on mount
   useEffect(() => {
+    // Prevent multiple initializations globally
+    if (authInitialized || authInitializing || initRef.current) {
+      return;
+    }
+    
+    initRef.current = true;
+    authInitializing = true;
+    
     const initAuth = async () => {
       try {
         setLoading(true);
         
-        // Fetch current session from Better-Auth
-        const response = await fetch(`${API_BASE}/api/auth/session`, {
-          credentials: 'include', // Include HTTPOnly cookies
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.user) {
-            setSession(data);
-          } else {
-            clearAuth();
-          }
+        // Fetch current session
+        const sessionData = await authService.getSession();
+        
+        if (sessionData && sessionData.user) {
+          setSession(sessionData);
         } else {
           clearAuth();
         }
+        
+        authInitialized = true;
       } catch (err) {
-        console.error('[Auth] Session initialization failed:', err);
         clearAuth();
       } finally {
         setLoading(false);
+        authInitializing = false;
       }
     };
 
     initAuth();
-  }, []);
+  }, [setSession, setLoading, clearAuth]);
 
   /**
    * Sign in with Google OAuth
    */
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = () => {
     try {
       setLoading(true);
       setError(null);
       
       // Redirect to Google OAuth
-      const googleAuthUrl = `${API_BASE}/api/auth/sign-in/google`;
-      window.location.href = googleAuthUrl;
+      authService.signInWithGoogle();
       
     } catch (err) {
-      console.error('[Auth] Google sign-in failed:', err);
       setError(err.message || 'Failed to sign in with Google');
       toast.error('Failed to sign in with Google');
       setLoading(false);
@@ -93,11 +96,8 @@ export const useAuth = () => {
     try {
       setLoading(true);
       
-      // Call Better-Auth sign-out endpoint
-      await fetch(`${API_BASE}/api/auth/sign-out`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      // Call sign-out endpoint
+      await authService.signOut();
       
       // Clear local state
       clearAuth();
@@ -105,43 +105,12 @@ export const useAuth = () => {
       toast.success('Signed out successfully');
       
       // Redirect to login
-      window.location.href = '/login';
+      window.location.href = '/';
       
     } catch (err) {
-      console.error('[Auth] Sign-out failed:', err);
       toast.error('Failed to sign out');
     } finally {
       setLoading(false);
-    }
-  };
-
-  /**
-   * Update user profile
-   */
-  const updateProfile = async (updates) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/auth/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      const data = await response.json();
-      updateUserProfile(data.user);
-      toast.success('Profile updated successfully');
-      
-      return data.user;
-    } catch (err) {
-      console.error('[Auth] Profile update failed:', err);
-      toast.error(err.message || 'Failed to update profile');
-      throw err;
     }
   };
 
@@ -150,24 +119,47 @@ export const useAuth = () => {
    */
   const refreshSession = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/auth/session`, {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.user) {
-          setSession(data);
-          return data;
-        }
+      const sessionData = await authService.getSession();
+      
+      if (sessionData && sessionData.user) {
+        setSession(sessionData);
+        return sessionData;
       }
       
       clearAuth();
       return null;
     } catch (err) {
-      console.error('[Auth] Session refresh failed:', err);
       clearAuth();
       return null;
+    }
+  };
+
+  /**
+   * Update user profile
+   */
+  const updateProfile = async (updates) => {
+    try {
+      setLoading(true);
+      
+      // Call API to update profile
+      const response = await authAPI.updateProfile(updates);
+      
+      if (response.data.success) {
+        // Update local state
+        updateUserProfile(response.data.data);
+        
+        // Refresh session to sync
+        await refreshSession();
+        
+        return response.data.data;
+      }
+      
+      throw new Error('Failed to update profile');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update profile');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -182,7 +174,7 @@ export const useAuth = () => {
     // Actions
     signInWithGoogle,
     logout,
-    updateProfile,
     refreshSession,
+    updateProfile,
   };
 };

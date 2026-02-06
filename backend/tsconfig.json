@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@models/*": ["./src/domain/models/*"],
+      "@entities/*": ["./src/domain/entities/*"],
+      "@interfaces/*": ["./src/domain/interfaces/*"],
+      "@controllers/*": ["./src/presentation/controllers/*"],
+      "@services/*": ["./src/application/services/*"],
+      "@repositories/*": ["./src/infrastructure/repositories/*"],
+      "@middleware/*": ["./src/presentation/middleware/*"],
+      "@routes/*": ["./src/presentation/routes/*"],
+      "@dtos/*": ["./src/application/dtos/*"],
+      "@config/*": ["./src/config/*"],
+      "@types/*": ["./src/types/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

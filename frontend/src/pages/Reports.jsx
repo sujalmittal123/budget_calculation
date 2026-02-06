@@ -18,8 +18,12 @@ import {
 import { dashboardAPI, exportAPI } from '../services/api';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency';
+import { useAuth } from '../hooks/useAuth';
 
 const Reports = () => {
+  const { user } = useAuth();
+  const userCurrency = user?.preferences?.currency || 'USD';
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -82,13 +86,7 @@ const Reports = () => {
     }
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -270,18 +268,18 @@ const Reports = () => {
             {paymentBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={paymentBreakdown} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} />
-                  <YAxis type="category" dataKey="paymentMethod" width={100} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      color: '#fff',
-                    }}
-                    formatter={(value) => formatCurrency(value)}
-                  />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                <XAxis dataKey="monthName" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${getCurrencySymbol(userCurrency)}${v / 1000}k`} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#fff',
+                  }}
+                  formatter={(value) => formatCurrency(value)}
+                />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {paymentBreakdown.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={PAYMENT_COLORS[entry.paymentMethod] || '#6B7280'} />
@@ -304,10 +302,10 @@ const Reports = () => {
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyTrend}>
+                <BarChart data={monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                 <XAxis dataKey="monthName" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v / 1000}k`} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${getCurrencySymbol(userCurrency)}${v / 1000}k`} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',

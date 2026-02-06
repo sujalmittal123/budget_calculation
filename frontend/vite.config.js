@@ -4,11 +4,25 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173, // Changed back to Vite's default to match your Google OAuth config
+    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
+        ws: true,
+        cookieDomainRewrite: 'localhost', // Important for cookies
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Response:', proxyRes.statusCode, req.url);
+          });
+        },
       },
     },
   },

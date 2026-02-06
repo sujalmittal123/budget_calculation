@@ -2,7 +2,7 @@ const rateLimit = require('express-rate-limit');
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'development' ? 100 : 5,
+  max: process.env.NODE_ENV === 'development' ? 1000 : 5,
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again after 15 minutes.',
@@ -15,7 +15,7 @@ const authLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000, // Increased for development
   message: {
     success: false,
     message: 'Too many requests from this IP. Please try again after 15 minutes.',

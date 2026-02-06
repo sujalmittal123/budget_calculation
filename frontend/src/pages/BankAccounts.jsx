@@ -4,10 +4,14 @@ import { bankAccountsAPI, dashboardAPI } from '../services/api';
 import Modal from '../components/Modal';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
+import { formatCurrency as formatCurrencyUtil } from '../utils/currency';
+import { useAuth } from '../hooks/useAuth';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#6366F1'];
 
 const BankAccounts = () => {
+  const { user } = useAuth();
+  const userCurrency = user?.preferences?.currency || 'USD';
   const [bankAccounts, setBankAccounts] = useState([]);
   const [bankSummary, setBankSummary] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,12 +107,7 @@ const BankAccounts = () => {
     });
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
+  const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
 
   const getSummaryForAccount = (accountId) => {
     return bankSummary.find(s => s.id === accountId) || {};

@@ -3,7 +3,7 @@ const PDFDocument = require('pdfkit');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const BankAccount = require('../models/BankAccount');
-const { protect } = require('../middleware/betterAuthMiddleware');
+const { protect } = require('../middleware/auth');
 
 // All routes are protected
 router.use(protect);

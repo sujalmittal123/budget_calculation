@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const DailyNote = require('../models/DailyNote');
 const Transaction = require('../models/Transaction');
-const { protect } = require('../middleware/betterAuthMiddleware');
+const { protect } = require('../middleware/auth');
 
 // All routes are protected
 router.use(protect);

@@ -6,7 +6,7 @@ const fs = require('fs');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const BankAccount = require('../models/BankAccount');
-const { protect } = require('../middleware/betterAuthMiddleware');
+const { protect } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 
 // Configure multer for CSV upload
@@ -136,34 +136,57 @@ router.get('/:id', [
 // @desc    Create transaction
 // @access  Private
 router.post('/', [
-  body('bankId').isMongoId().withMessage('Valid bank account is required'),
   body('type').isIn(['income', 'expense']).withMessage('Type must be income or expense'),
-  body('category').isIn(['personal', 'business']).withMessage('Category must be personal or business'),
+  body('category').notEmpty().withMessage('Category is required'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be at least 0.01'),
   body('date').optional().isISO8601().withMessage('Invalid date format'),
   body('paymentMethod').optional().isIn(['cash', 'card', 'upi', 'bank_transfer', 'cheque', 'other']),
-  body('description').optional().trim().isLength({ max: 500 })
+  body('description').optional().trim().isLength({ max: 500 }),
+  // BankId is optional - validate only if it's a non-empty string
+  body('bankId').optional({ checkFalsy: true }).isMongoId().withMessage('Invalid bank account ID')
 ], validate, async (req, res) => {
   try {
+    console.log('[Transaction] Create request body:', JSON.stringify(req.body, null, 2));
     const { bankId, type, category, subcategory, amount, paymentMethod, description, date, tags, isRecurring, recurringPeriod } = req.body;
 
-    // Verify bank account belongs to user
-    const bankAccount = await BankAccount.findOne({
-      _id: bankId,
-      userId: req.user.id,
-      isActive: true
-    });
-
-    if (!bankAccount) {
-      return res.status(404).json({
+    // For non-cash payment methods, bankId is required
+    if (paymentMethod !== 'cash' && !bankId) {
+      console.log('[Transaction] ERROR: Bank required for non-cash');
+      return res.status(400).json({
         success: false,
-        message: 'Bank account not found'
+        message: 'Bank account is required for non-cash transactions'
       });
     }
 
+    // Verify bank account if provided
+    if (bankId) {
+      const bankAccount = await BankAccount.findOne({
+        _id: bankId,
+        userId: req.user.id,
+        isActive: true
+      });
+
+      if (!bankAccount) {
+        return res.status(404).json({
+          success: false,
+          message: 'Bank account not found'
+        });
+      }
+    }
+
+    console.log('[Transaction] Creating transaction with data:', {
+      userId: req.user.id,
+      bankId: bankId || null,
+      type,
+      category,
+      subcategory,
+      amount,
+      paymentMethod: paymentMethod || 'card'
+    });
+
     const transaction = await Transaction.create({
       userId: req.user.id,
-      bankId,
+      bankId: bankId || null,
       type,
       category,
       subcategory,
@@ -176,15 +199,21 @@ router.post('/', [
       recurringPeriod
     });
 
-    // Populate bank info
-    await transaction.populate('bankId', 'bankName color balance');
+    console.log('[Transaction] Transaction created:', transaction._id);
 
+    // Populate bank info if exists
+    if (bankId) {
+      await transaction.populate('bankId', 'bankName color balance');
+    }
+
+    console.log('[Transaction] Sending success response');
     res.status(201).json({
       success: true,
       data: transaction,
-      updatedBankBalance: transaction.bankId.balance
+      updatedBankBalance: transaction.bankId?.balance || null
     });
   } catch (error) {
+    console.error('[Transaction] ERROR creating transaction:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating transaction',

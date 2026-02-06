@@ -34,7 +34,6 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Session expired or invalid, redirect to login
-      console.log('[API] 401 Unauthorized - redirecting to login');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -44,7 +43,8 @@ api.interceptors.response.use(
 // Auth API - Simplified (Better-Auth handles most auth operations)
 export const authAPI = {
   // These endpoints still exist for profile management
-  updateProfile: (data) => api.put('/auth/profile', data),
+  updateProfile: (data) => api.put('/user/profile', data),
+  getCurrentUser: () => api.get('/user/me'),
   // Note: login, register, and Google OAuth are now handled by Better-Auth endpoints
 };
 
@@ -100,6 +100,31 @@ export const exportAPI = {
     params,
     responseType: 'blob' 
   }),
+};
+
+// Recurring Transactions API
+export const recurringAPI = {
+  // CRUD operations
+  getAll: (params) => api.get('/recurring', { params }),
+  getById: (id) => api.get(`/recurring/${id}`),
+  create: (data) => api.post('/recurring', data),
+  update: (id, data) => api.put(`/recurring/${id}`, data),
+  delete: (id) => api.delete(`/recurring/${id}`),
+  pause: (id) => api.patch(`/recurring/${id}/pause`),
+  resume: (id) => api.patch(`/recurring/${id}/resume`),
+  
+  // AI Detection
+  detect: () => api.get('/recurring/detect'),
+  approvePattern: (pattern) => api.post('/recurring/detect/approve', { pattern }),
+  
+  // Generation
+  getUpcoming: (days = 30) => api.get('/recurring/upcoming', { params: { days } }),
+  generateNow: (id) => api.post(`/recurring/${id}/generate`),
+  getHistory: (id) => api.get(`/recurring/${id}/history`),
+  
+  // Batch operations
+  batchApprove: (patterns) => api.post('/recurring/batch/approve', { patterns }),
+  batchDelete: (ids) => api.delete('/recurring/batch/delete', { data: { ids } }),
 };
 
 export default api;

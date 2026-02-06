@@ -16,16 +16,18 @@ import {
   FiUser,
   FiBook,
   FiChevronDown,
+  FiRepeat,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import api from '../services/api';
+import QuickAddTransaction from './QuickAddTransaction';
+import { CURRENCIES as CURRENCIES_OBJ } from '../utils/currency';
 
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-];
+// Convert CURRENCIES object to array format for dropdown
+const CURRENCIES = Object.entries(CURRENCIES_OBJ).map(([code, config]) => ({
+  code,
+  symbol: config.symbol,
+  name: config.name
+}));
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -52,12 +54,13 @@ const Layout = () => {
   };
 
   const navItems = [
-    { path: '/dashboard', icon: FiHome, label: 'Dashboard' },
-    { path: '/transactions', icon: FiDollarSign, label: 'Transactions' },
-    { path: '/bank-accounts', icon: FiCreditCard, label: 'Bank Accounts' },
-    { path: '/daily-notes', icon: FiBook, label: 'Daily Notes' },
-    { path: '/reports', icon: FiPieChart, label: 'Reports' },
-    { path: '/settings', icon: FiSettings, label: 'Settings' },
+    { path: '/app/dashboard', icon: FiHome, label: 'Dashboard' },
+    { path: '/app/transactions', icon: FiDollarSign, label: 'Transactions' },
+    { path: '/app/recurring', icon: FiRepeat, label: 'Recurring' },
+    { path: '/app/bank-accounts', icon: FiCreditCard, label: 'Bank Accounts' },
+    { path: '/app/daily-notes', icon: FiBook, label: 'Daily Notes' },
+    { path: '/app/reports', icon: FiPieChart, label: 'Reports' },
+    { path: '/app/settings', icon: FiSettings, label: 'Settings' },
   ];
 
   const NavItem = ({ path, icon: Icon, label }) => (
@@ -220,6 +223,9 @@ const Layout = () => {
           </div>
         </main>
       </div>
+
+      {/* Quick Add Transaction FAB */}
+      <QuickAddTransaction />
     </div>
   );
 };

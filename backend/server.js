@@ -3,16 +3,25 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const mongoSanitize = require('express-mongo-sanitize');
+const logger = require('./utils/logger');
 
 // Import rate limiters
 const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
 
+// Import cron jobs
+const { startRecurringJob } = require('./jobs/generateRecurring');
+
 // Import routes
+const authRoutes = require('./routes/auth');
 const bankAccountRoutes = require('./routes/bankAccounts');
 const transactionRoutes = require('./routes/transactions');
 const dashboardRoutes = require('./routes/dashboard');
 const exportRoutes = require('./routes/export');
 const dailyNotesRoutes = require('./routes/dailyNotes');
+const recurringTransactionsRoutes = require('./routes/recurringTransactions');
 
 const app = express();
 
@@ -27,97 +36,119 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.APP_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Initialize Better-Auth
-async function initializeAuth() {
-  try {
-    // Connect to MongoDB first
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
-    
-    // Dynamic import for Better-Auth (ESM module)
-    const { toNodeHandler } = await import('better-auth/node');
-    const { betterAuth } = await import('better-auth');
-    const { mongodbAdapter } = await import('better-auth/adapters/mongodb');
-    
-    // Create Better-Auth instance
-    const auth = betterAuth({
-      baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:5000',
-      secret: process.env.BETTER_AUTH_SECRET,
-      database: mongodbAdapter(mongoose.connection),
-      socialProviders: {
-        google: {
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        },
-      },
-      session: {
-        expiresIn: 60 * 60 * 24 * 30,
-        updateAge: 60 * 60 * 24,
-      },
-      trustedOrigins: ['http://localhost:5173', 'http://localhost:3000'],
-    });
-    
-    // Mount Better-Auth handler BEFORE express.json()
-    app.all('/api/auth/*', (req, res, next) => {
-      console.log('[Better-Auth] Request:', req.method, req.url);
-      next();
-    }, authLimiter, toNodeHandler(auth));
-    console.log('✅ Better-Auth mounted');
-    
-    // Store auth globally for middleware to use
-    global.betterAuthInstance = auth;
-    
-    // Body parsing middleware - AFTER Better-Auth
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
-    
-    // API rate limiting
-    app.use('/api', apiLimiter);
-    
-    // Application routes
-    app.use('/api/bank-accounts', bankAccountRoutes);
-    app.use('/api/transactions', transactionRoutes);
-    app.use('/api/dashboard', dashboardRoutes);
-    app.use('/api/export', exportRoutes);
-    app.use('/api/daily-notes', dailyNotesRoutes);
-    
-    // Health check
-    app.get('/api/health', (req, res) => {
-      res.json({ status: 'ok', message: 'Budget Tracker API is running' });
-    });
-    
-    // Error handling
-    app.use((err, req, res, next) => {
-      console.error('❌ Error:', err.stack);
-      res.status(500).json({
-        success: false,
-        message: 'Something went wrong!',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-      });
-    });
-    
-    // 404 handler
-    app.use((req, res) => {
-      res.status(404).json({ success: false, message: 'Route not found' });
-    });
-    
-    // Start server
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📍 Auth: http://localhost:${PORT}/api/auth/*`);
-    });
-    
-  } catch (err) {
-    console.error('❌ Initialization error:', err);
-    process.exit(1);
-  }
-}
+// Session middleware with MongoDB store
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  rolling: true, // Reset expiration on every response
+  store: MongoStore.default ? MongoStore.default.create({
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 30 * 24 * 60 * 60, // 30 days in seconds
+    autoRemove: 'native', // Let MongoDB handle TTL
+    touchAfter: 24 * 3600, // Only update session once per 24 hours (unless modified)
+  }) : new MongoStore({
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 30 * 24 * 60 * 60,
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    sameSite: 'lax',
+    path: '/',
+  },
+  name: 'budget.sid',
+}));
 
-initializeAuth();
+// Debug middleware - log session info
+app.use((req, res, next) => {
+  if (req.path.includes('/api/') && req.path !== '/api/health') {
+    logger.debug(`${req.method} ${req.path}`, {
+      sessionID: req.sessionID ? 'exists' : 'none',
+      userID: req.session?.userId || 'none',
+    });
+  }
+  next();
+});
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize({
+  replaceWith: '_',
+  onSanitize: ({ req, key }) => {
+    logger.warn(`Sanitized request data: ${key} in ${req.method} ${req.path}`);
+  },
+}));
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    logger.info('✅ Connected to MongoDB');
+    
+    // Start cron jobs after database connection
+    startRecurringJob();
+  })
+  .catch(err => {
+    logger.error('❌ MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+// API rate limiting
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter);
+
+// Application routes
+app.use('/api/auth', authRoutes);
+app.use('/api/user', authRoutes); // Profile endpoints also accessible via /user
+app.use('/api/bank-accounts', bankAccountRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/daily-notes', dailyNotesRoutes);
+app.use('/api/recurring', recurringTransactionsRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Budget Tracker API is running' });
+});
+
+// Error handling
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+  });
+  
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  logger.info(`🚀 Server running on port ${PORT}`);
+  logger.info(`📍 API: http://localhost:${PORT}/api`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});

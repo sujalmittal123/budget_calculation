@@ -1,19 +1,6 @@
 const mongoose = require('mongoose');
 
-/**
- * User Model - Compatible with Better-Auth
- * 
- * This model has been updated to work with Better-Auth while maintaining
- * backward compatibility with existing budget tracking features.
- * 
- * Better-Auth will automatically manage:
- * - Authentication sessions (in 'session' collection)
- * - OAuth accounts (in 'account' collection)
- * - Email verification (in 'verification' collection)
- */
-
 const UserSchema = new mongoose.Schema({
-  // Basic user information (Better-Auth compatible)
   name: {
     type: String,
     required: [true, 'Please provide a name'],
@@ -31,20 +18,14 @@ const UserSchema = new mongoose.Schema({
       'Please provide a valid email'
     ]
   },
-  
-  // Better-Auth fields
   emailVerified: {
     type: Date,
-    default: null,
-    // Google OAuth users have pre-verified emails
+    default: null
   },
   image: {
     type: String,
-    default: null,
-    // Stores Google profile picture or custom avatar
+    default: null
   },
-  
-  // Budget Tracker specific fields
   monthlyBudgetLimit: {
     type: Number,
     default: 0
@@ -59,8 +40,6 @@ const UserSchema = new mongoose.Schema({
       default: 'INR'
     }
   },
-  
-  // Timestamps
   createdAt: {
     type: Date,
     default: Date.now
@@ -71,18 +50,15 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
-// Update timestamp on save
 UserSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
 
-// Virtual for checking if user has verified email
 UserSchema.virtual('isEmailVerified').get(function() {
   return this.emailVerified !== null;
 });
 
-// Ensure virtuals are included in JSON
 UserSchema.set('toJSON', { virtuals: true });
 UserSchema.set('toObject', { virtuals: true });
 
