@@ -66,12 +66,26 @@ router.get('/google/callback', async (req, res) => {
     // Create session
     req.session.userId = user._id.toString();
     
+    console.log('🔐 Creating session for user:', {
+      userId: user._id.toString(),
+      email: user.email,
+      sessionID: req.sessionID,
+      cookieSettings: {
+        secure: req.sessionStore?.cookie?.secure || 'not set',
+        sameSite: req.sessionStore?.cookie?.sameSite || 'not set',
+        httpOnly: req.sessionStore?.cookie?.httpOnly || 'not set',
+      }
+    });
+    
     // Save session and redirect to callback page
     req.session.save((err) => {
       if (err) {
-        console.error('Session save error:', err);
+        console.error('❌ Session save error:', err);
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=session_failed`);
       }
+      console.log('✅ Session saved successfully:', req.sessionID);
+      console.log('📤 Redirecting to:', `${process.env.FRONTEND_URL}/auth/callback?success=true`);
+      
       // Redirect to callback handler page
       res.redirect(`${process.env.FRONTEND_URL}/auth/callback?success=true`);
     });
@@ -151,7 +165,17 @@ router.post('/google', async (req, res) => {
 // @access  Public
 router.get('/session', async (req, res) => {
   try {
+    console.log('📥 Session check:', {
+      hasSession: !!req.session,
+      hasSessionId: !!req.sessionID,
+      hasUserId: !!req.session?.userId,
+      sessionID: req.sessionID || 'none',
+      userId: req.session?.userId || 'none',
+      cookies: req.headers.cookie || 'none'
+    });
+    
     if (!req.session || !req.session.userId) {
+      console.log('❌ No session found, returning null user');
       return res.json({
         success: true,
         data: { user: null }
@@ -161,6 +185,7 @@ router.get('/session', async (req, res) => {
     const user = await User.findById(req.session.userId);
 
     if (!user) {
+      console.log('❌ User not found in database, destroying session');
       req.session.destroy();
       return res.json({
         success: true,
@@ -168,6 +193,8 @@ router.get('/session', async (req, res) => {
       });
     }
 
+    console.log('✅ Session valid, returning user:', user.email);
+    
     res.json({
       success: true,
       data: {
