@@ -140,6 +140,22 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Debug endpoint to check environment
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    cookieSettings: {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    },
+    session: {
+      hasSession: !!req.session,
+      hasUserId: !!req.session?.userId,
+      sessionID: req.sessionID || 'none',
+    }
+  });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
