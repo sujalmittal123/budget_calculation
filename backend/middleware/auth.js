@@ -1,16 +1,49 @@
 const User = require('../models/User');
 
-// Protect routes - session-based auth
+// Helper function to load session from custom header
+const loadSessionFromHeader = (req) => {
+  return new Promise((resolve, reject) => {
+    const customSessionId = req.headers['x-session-id'];
+    
+    if (!customSessionId) {
+      return resolve(null);
+    }
+    
+    const sessionStore = req.sessionStore;
+    sessionStore.get(customSessionId, (err, session) => {
+      if (err || !session || !session.userId) {
+        return resolve(null);
+      }
+      resolve(session);
+    });
+  });
+};
+
+// Protect routes - session-based auth with custom header fallback
 const protect = async (req, res, next) => {
   try {
-    if (!req.session || !req.session.userId) {
+    let userId = null;
+    
+    // First, try to get userId from cookie-based session
+    if (req.session && req.session.userId) {
+      userId = req.session.userId;
+    } 
+    // Fallback: try custom session ID header (for cross-domain cookie issues)
+    else {
+      const session = await loadSessionFromHeader(req);
+      if (session && session.userId) {
+        userId = session.userId;
+      }
+    }
+    
+    if (!userId) {
       return res.status(401).json({
         success: false,
         message: 'Not authorized to access this route. Please sign in.',
       });
     }
 
-    const user = await User.findById(req.session.userId);
+    const user = await User.findById(userId);
     
     if (!user) {
       return res.status(401).json({
@@ -42,8 +75,22 @@ const protect = async (req, res, next) => {
 
 const optionalAuth = async (req, res, next) => {
   try {
+    let userId = null;
+    
+    // First, try to get userId from cookie-based session
     if (req.session && req.session.userId) {
-      const user = await User.findById(req.session.userId);
+      userId = req.session.userId;
+    } 
+    // Fallback: try custom session ID header
+    else {
+      const session = await loadSessionFromHeader(req);
+      if (session && session.userId) {
+        userId = session.userId;
+      }
+    }
+    
+    if (userId) {
+      const user = await User.findById(userId);
       
       if (user) {
         req.user = {
