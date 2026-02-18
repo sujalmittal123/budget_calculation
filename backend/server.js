@@ -39,7 +39,8 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Id'], // IMPORTANT: Allow custom header
+  exposedHeaders: ['Set-Cookie'],
 }));
 
 // Session middleware with MongoDB store
@@ -185,8 +186,74 @@ app.get('/api/debug/read-cookie', (req, res) => {
     hasSession: !!req.session,
     sessionID: req.sessionID || 'none',
     testData: req.session?.testData || 'none',
+    userId: req.session?.userId || 'none',
     cookies: req.headers.cookie || 'none',
+    customHeader: req.headers['x-session-id'] || 'none',
   });
+});
+
+// Simple status page to verify you're logged in
+app.get('/api/auth/status', async (req, res) => {
+  const customSessionId = req.headers['x-session-id'];
+  
+  // Check cookie-based session first
+  if (req.session && req.session.userId) {
+    const User = require('./models/User');
+    const user = await User.findById(req.session.userId);
+    return res.send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1>✅ Logged In (via Cookie)</h1>
+          <p><strong>Email:</strong> ${user?.email || 'N/A'}</p>
+          <p><strong>Session ID:</strong> ${req.sessionID}</p>
+          <p><strong>Method:</strong> Cookie</p>
+        </body>
+      </html>
+    `);
+  }
+  
+  // Check custom header
+  if (customSessionId) {
+    const sessionStore = req.sessionStore;
+    sessionStore.get(customSessionId, async (err, session) => {
+      if (!err && session && session.userId) {
+        const User = require('./models/User');
+        const user = await User.findById(session.userId);
+        return res.send(`
+          <html>
+            <body style="font-family: Arial; padding: 20px;">
+              <h1>✅ Logged In (via Custom Header)</h1>
+              <p><strong>Email:</strong> ${user?.email || 'N/A'}</p>
+              <p><strong>Session ID:</strong> ${customSessionId}</p>
+              <p><strong>Method:</strong> X-Session-Id Header</p>
+            </body>
+          </html>
+        `);
+      } else {
+        res.send(`
+          <html>
+            <body style="font-family: Arial; padding: 20px;">
+              <h1>❌ Not Logged In</h1>
+              <p>No valid session found</p>
+              <p><strong>Custom Session ID Provided:</strong> ${customSessionId}</p>
+              <p><strong>Session Found:</strong> ${!err && session ? 'Yes' : 'No'}</p>
+            </body>
+          </html>
+        `);
+      }
+    });
+  } else {
+    res.send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1>❌ Not Logged In</h1>
+          <p>No session cookie or custom header found</p>
+          <p><strong>Has Cookie Session:</strong> ${!!req.session}</p>
+          <p><strong>Has User ID:</strong> ${!!req.session?.userId}</p>
+        </body>
+      </html>
+    `);
+  }
 });
 
 // 404 handler
