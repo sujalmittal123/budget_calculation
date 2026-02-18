@@ -29,6 +29,9 @@ api.interceptors.request.use(
     const sessionId = localStorage.getItem('sessionId');
     if (sessionId) {
       config.headers['X-Session-Id'] = sessionId;
+      console.log('📤 Sending request with session ID:', sessionId.substring(0, 10) + '...');
+    } else {
+      console.warn('⚠️ No session ID found in localStorage');
     }
     return config;
   },
@@ -42,6 +45,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.error('❌ 401 Unauthorized - Session expired or invalid');
+      console.log('Clearing session and redirecting to login...');
+      localStorage.removeItem('sessionId');
       // Session expired or invalid, redirect to login
       window.location.href = '/login';
     }
