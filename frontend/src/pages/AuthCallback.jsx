@@ -18,6 +18,7 @@ const AuthCallback = () => {
     const handleCallback = async () => {
       const success = searchParams.get('success');
       const error = searchParams.get('error');
+      const sessionId = searchParams.get('sid'); // Get session ID from URL
 
       if (error) {
         navigate('/login?error=' + error);
@@ -25,6 +26,11 @@ const AuthCallback = () => {
       }
 
       if (success === 'true') {
+        // Store session ID in localStorage if provided (fallback for cookie issues)
+        if (sessionId) {
+          console.log('📝 Storing session ID from URL:', sessionId);
+          localStorage.setItem('sessionId', sessionId);
+        }
         
         // Small delay to ensure backend session is fully saved
         await new Promise(resolve => setTimeout(resolve, 500));

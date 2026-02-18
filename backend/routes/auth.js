@@ -84,10 +84,11 @@ router.get('/google/callback', async (req, res) => {
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=session_failed`);
       }
       console.log('✅ Session saved successfully:', req.sessionID);
-      console.log('📤 Redirecting to:', `${process.env.FRONTEND_URL}/auth/callback?success=true`);
+      console.log('📤 Redirecting to:', `${process.env.FRONTEND_URL}/auth/callback?success=true&sid=${req.sessionID}`);
       
-      // CRITICAL FIX: Use HTML redirect instead of 302 redirect
-      // This ensures the Set-Cookie header is processed before redirect
+      // CRITICAL FIX: Pass session ID in URL as fallback for cross-domain cookie issues
+      // The cookie is still set (for same-domain requests), but we also pass the session ID
+      // in the URL so the frontend can send it back in a custom header
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -97,9 +98,9 @@ router.get('/google/callback', async (req, res) => {
           </head>
           <body>
             <script>
-              // Small delay to ensure cookie is set
+              // Redirect with session ID in URL (fallback for cookie issues)
               setTimeout(function() {
-                window.location.href = "${process.env.FRONTEND_URL}/auth/callback?success=true";
+                window.location.href = "${process.env.FRONTEND_URL}/auth/callback?success=true&sid=${req.sessionID}";
               }, 100);
             </script>
             <p>Authentication successful! Redirecting...</p>
@@ -183,15 +184,77 @@ router.post('/google', async (req, res) => {
 // @access  Public
 router.get('/session', async (req, res) => {
   try {
+    // Check for session ID in custom header (fallback for cross-domain cookie issues)
+    const customSessionId = req.headers['x-session-id'];
+    
     console.log('📥 Session check:', {
       hasSession: !!req.session,
       hasSessionId: !!req.sessionID,
       hasUserId: !!req.session?.userId,
       sessionID: req.sessionID || 'none',
+      customSessionId: customSessionId || 'none',
       userId: req.session?.userId || 'none',
       cookies: req.headers.cookie || 'none'
     });
     
+    // If custom session ID is provided, try to load that session
+    if (customSessionId && (!req.session || !req.session.userId)) {
+      // This is a workaround for cross-domain cookie issues
+      // We'll manually load the session from the store
+      const sessionStore = req.sessionStore;
+      
+      return new Promise((resolve, reject) => {
+        sessionStore.get(customSessionId, (err, session) => {
+          if (err || !session || !session.userId) {
+            console.log('❌ Custom session not found:', customSessionId);
+            return res.json({
+              success: true,
+              data: { user: null }
+            });
+          }
+          
+          console.log('✅ Found session via custom header:', customSessionId);
+          
+          // Load user from session
+          User.findById(session.userId)
+            .then(user => {
+              if (!user) {
+                console.log('❌ User not found in database');
+                return res.json({
+                  success: true,
+                  data: { user: null }
+                });
+              }
+              
+              console.log('✅ Session valid via custom header, returning user:', user.email);
+              
+              res.json({
+                success: true,
+                data: {
+                  user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    image: user.image,
+                    emailVerified: user.emailVerified,
+                    preferences: user.preferences,
+                    monthlyBudgetLimit: user.monthlyBudgetLimit
+                  }
+                }
+              });
+            })
+            .catch(err => {
+              console.error('Error loading user:', err);
+              res.json({
+                success: true,
+                data: { user: null }
+              });
+            });
+        });
+      });
+    }
+    
+    // Normal cookie-based session check
     if (!req.session || !req.session.userId) {
       console.log('❌ No session found, returning null user');
       return res.json({

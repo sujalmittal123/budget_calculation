@@ -25,7 +25,11 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // HTTPOnly cookies are automatically sent by the browser
-    // No manual token handling needed
+    // But as fallback for cross-domain cookie issues, also send session ID in header
+    const sessionId = localStorage.getItem('sessionId');
+    if (sessionId) {
+      config.headers['X-Session-Id'] = sessionId;
+    }
     return config;
   },
   (error) => {
