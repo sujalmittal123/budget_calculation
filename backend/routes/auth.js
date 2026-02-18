@@ -86,8 +86,26 @@ router.get('/google/callback', async (req, res) => {
       console.log('✅ Session saved successfully:', req.sessionID);
       console.log('📤 Redirecting to:', `${process.env.FRONTEND_URL}/auth/callback?success=true`);
       
-      // Redirect to callback handler page
-      res.redirect(`${process.env.FRONTEND_URL}/auth/callback?success=true`);
+      // CRITICAL FIX: Use HTML redirect instead of 302 redirect
+      // This ensures the Set-Cookie header is processed before redirect
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Redirecting...</title>
+            <meta charset="utf-8">
+          </head>
+          <body>
+            <script>
+              // Small delay to ensure cookie is set
+              setTimeout(function() {
+                window.location.href = "${process.env.FRONTEND_URL}/auth/callback?success=true";
+              }, 100);
+            </script>
+            <p>Authentication successful! Redirecting...</p>
+          </body>
+        </html>
+      `);
     });
 
   } catch (error) {

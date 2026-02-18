@@ -156,6 +156,39 @@ app.get('/api/debug/env', (req, res) => {
   });
 });
 
+// Test endpoint to manually set a session
+app.get('/api/debug/test-cookie', (req, res) => {
+  req.session.testData = 'cookie-test-' + Date.now();
+  req.session.save((err) => {
+    if (err) {
+      return res.json({ success: false, error: err.message });
+    }
+    res.json({
+      success: true,
+      message: 'Cookie should be set',
+      sessionID: req.sessionID,
+      testData: req.session.testData,
+      cookieWillBe: {
+        name: 'budget.sid',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        httpOnly: true,
+      }
+    });
+  });
+});
+
+// Test endpoint to read session
+app.get('/api/debug/read-cookie', (req, res) => {
+  res.json({
+    success: true,
+    hasSession: !!req.session,
+    sessionID: req.sessionID || 'none',
+    testData: req.session?.testData || 'none',
+    cookies: req.headers.cookie || 'none',
+  });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
