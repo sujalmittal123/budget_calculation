@@ -146,12 +146,10 @@ router.post('/', [
   body('bankId').optional({ checkFalsy: true }).isMongoId().withMessage('Invalid bank account ID')
 ], validate, async (req, res) => {
   try {
-    console.log('[Transaction] Create request body:', JSON.stringify(req.body, null, 2));
     const { bankId, type, category, subcategory, amount, paymentMethod, description, date, tags, isRecurring, recurringPeriod } = req.body;
 
     // For non-cash payment methods, bankId is required
     if (paymentMethod !== 'cash' && !bankId) {
-      console.log('[Transaction] ERROR: Bank required for non-cash');
       return res.status(400).json({
         success: false,
         message: 'Bank account is required for non-cash transactions'
@@ -174,16 +172,6 @@ router.post('/', [
       }
     }
 
-    console.log('[Transaction] Creating transaction with data:', {
-      userId: req.user.id,
-      bankId: bankId || null,
-      type,
-      category,
-      subcategory,
-      amount,
-      paymentMethod: paymentMethod || 'card'
-    });
-
     const transaction = await Transaction.create({
       userId: req.user.id,
       bankId: bankId || null,
@@ -199,21 +187,17 @@ router.post('/', [
       recurringPeriod
     });
 
-    console.log('[Transaction] Transaction created:', transaction._id);
-
     // Populate bank info if exists
     if (bankId) {
       await transaction.populate('bankId', 'bankName color balance');
     }
 
-    console.log('[Transaction] Sending success response');
     res.status(201).json({
       success: true,
       data: transaction,
       updatedBankBalance: transaction.bankId?.balance || null
     });
   } catch (error) {
-    console.error('[Transaction] ERROR creating transaction:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating transaction',

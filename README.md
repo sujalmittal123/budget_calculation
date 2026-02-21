@@ -11,9 +11,10 @@ A full-stack web application to help users track personal expenses, business exp
 ## ✨ Features
 
 ### 🔐 Authentication
-- User registration and login
-- JWT-based authentication
-- Secure password hashing with bcrypt
+- Google OAuth 2.0 authentication
+- Session-based authentication with express-session
+- Hybrid authentication (cookie + custom header for cross-domain)
+- Secure session management
 
 ### 💸 Transaction Management
 - Add, edit, and delete transactions
@@ -54,6 +55,12 @@ A full-stack web application to help users track personal expenses, business exp
 - Export transactions as CSV
 - Export reports as PDF
 
+### 🔄 Recurring Transactions
+- AI-powered pattern detection from transaction history
+- Automatic generation of recurring transactions
+- Manual management of recurring items
+- Pause/Resume functionality
+
 ### 🌙 Dark Mode
 - Full dark mode support
 - System preference detection
@@ -62,13 +69,14 @@ A full-stack web application to help users track personal expenses, business exp
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React.js 18, Tailwind CSS 3.4, Vite |
+| Frontend | React.js 18, Tailwind CSS 3.4, Vite, Zustand |
 | Charts | Recharts |
 | Backend | Node.js, Express.js |
 | Database | MongoDB with Mongoose |
-| Auth | JWT, bcryptjs |
+| Auth | Google OAuth 2.0, express-session |
 | PDF | PDFKit |
 | CSV | csv-parse |
+| Deployment | Docker, Azure Container Apps |
 
 ## 📁 Project Structure
 
@@ -342,6 +350,12 @@ date,type,category,amount,description,paymentMethod
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+## 📚 Documentation
+
+- [Azure Deployment Guide](./docs/AZURE_DEPLOYMENT_GUIDE.md) - Complete guide for deploying to Azure
+- [Recurring Transactions Guide](./docs/RECURRING_TRANSACTIONS_GUIDE.md) - Feature documentation
+- [Sprint 1 Summary](./docs/SPRINT1_SUMMARY.md) - Development summary
 
 ## 🙏 Acknowledgments
 

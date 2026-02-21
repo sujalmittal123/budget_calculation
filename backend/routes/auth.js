@@ -5,6 +5,7 @@ const router = express.Router();
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const logger = require('../utils/logger');
 
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
@@ -66,25 +67,19 @@ router.get('/google/callback', async (req, res) => {
     // Create session
     req.session.userId = user._id.toString();
     
-    console.log('🔐 Creating session for user:', {
+    logger.info('Session created for user', {
       userId: user._id.toString(),
       email: user.email,
-      sessionID: req.sessionID,
-      cookieSettings: {
-        secure: req.sessionStore?.cookie?.secure || 'not set',
-        sameSite: req.sessionStore?.cookie?.sameSite || 'not set',
-        httpOnly: req.sessionStore?.cookie?.httpOnly || 'not set',
-      }
+      sessionID: req.sessionID
     });
     
     // Save session and redirect to callback page
     req.session.save((err) => {
       if (err) {
-        console.error('❌ Session save error:', err);
+        logger.error('Session save error', err);
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=session_failed`);
       }
-      console.log('✅ Session saved successfully:', req.sessionID);
-      console.log('📤 Redirecting to:', `${process.env.FRONTEND_URL}/auth/callback?success=true&sid=${req.sessionID}`);
+      logger.debug('Session saved successfully', { sessionID: req.sessionID });
       
       // CRITICAL FIX: Pass session ID in URL as fallback for cross-domain cookie issues
       // The cookie is still set (for same-domain requests), but we also pass the session ID
@@ -110,7 +105,7 @@ router.get('/google/callback', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google OAuth error:', error);
+    logger.error('Google OAuth error', error);
     res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
   }
 });
@@ -171,7 +166,7 @@ router.post('/google', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google credential verification error:', error);
+    logger.error('Google credential verification error', error);
     res.status(401).json({
       success: false,
       message: 'Invalid Google credential'
@@ -187,14 +182,10 @@ router.get('/session', async (req, res) => {
     // Check for session ID in custom header (fallback for cross-domain cookie issues)
     const customSessionId = req.headers['x-session-id'];
     
-    console.log('📥 Session check:', {
+    logger.debug('Session check', {
       hasSession: !!req.session,
-      hasSessionId: !!req.sessionID,
       hasUserId: !!req.session?.userId,
-      sessionID: req.sessionID || 'none',
-      customSessionId: customSessionId || 'none',
-      userId: req.session?.userId || 'none',
-      cookies: req.headers.cookie || 'none'
+      customSessionId: customSessionId || 'none'
     });
     
     // If custom session ID is provided, try to load that session
@@ -206,27 +197,27 @@ router.get('/session', async (req, res) => {
       return new Promise((resolve, reject) => {
         sessionStore.get(customSessionId, (err, session) => {
           if (err || !session || !session.userId) {
-            console.log('❌ Custom session not found:', customSessionId);
+            logger.debug('Custom session not found', { customSessionId });
             return res.json({
               success: true,
               data: { user: null }
             });
           }
           
-          console.log('✅ Found session via custom header:', customSessionId);
+          logger.debug('Found session via custom header', { customSessionId });
           
           // Load user from session
           User.findById(session.userId)
             .then(user => {
               if (!user) {
-                console.log('❌ User not found in database');
+                logger.debug('User not found in database');
                 return res.json({
                   success: true,
                   data: { user: null }
                 });
               }
               
-              console.log('✅ Session valid via custom header, returning user:', user.email);
+              logger.debug('Session valid via custom header', { email: user.email });
               
               res.json({
                 success: true,
@@ -244,7 +235,7 @@ router.get('/session', async (req, res) => {
               });
             })
             .catch(err => {
-              console.error('Error loading user:', err);
+              logger.error('Error loading user', err);
               res.json({
                 success: true,
                 data: { user: null }
@@ -256,7 +247,7 @@ router.get('/session', async (req, res) => {
     
     // Normal cookie-based session check
     if (!req.session || !req.session.userId) {
-      console.log('❌ No session found, returning null user');
+      logger.debug('No session found');
       return res.json({
         success: true,
         data: { user: null }
@@ -266,7 +257,7 @@ router.get('/session', async (req, res) => {
     const user = await User.findById(req.session.userId);
 
     if (!user) {
-      console.log('❌ User not found in database, destroying session');
+      logger.warn('User not found in database, destroying session');
       req.session.destroy();
       return res.json({
         success: true,
@@ -274,7 +265,7 @@ router.get('/session', async (req, res) => {
       });
     }
 
-    console.log('✅ Session valid, returning user:', user.email);
+    logger.debug('Session valid', { email: user.email });
     
     res.json({
       success: true,
@@ -292,7 +283,7 @@ router.get('/session', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Session fetch error:', error);
+    logger.error('Session fetch error', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching session'

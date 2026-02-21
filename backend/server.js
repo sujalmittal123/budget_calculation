@@ -141,58 +141,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Debug endpoint to check environment
-app.get('/api/debug/env', (req, res) => {
-  res.json({
-    NODE_ENV: process.env.NODE_ENV,
-    cookieSettings: {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    },
-    session: {
-      hasSession: !!req.session,
-      hasUserId: !!req.session?.userId,
-      sessionID: req.sessionID || 'none',
-    }
-  });
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Test endpoint to manually set a session
-app.get('/api/debug/test-cookie', (req, res) => {
-  req.session.testData = 'cookie-test-' + Date.now();
-  req.session.save((err) => {
-    if (err) {
-      return res.json({ success: false, error: err.message });
-    }
-    res.json({
-      success: true,
-      message: 'Cookie should be set',
-      sessionID: req.sessionID,
-      testData: req.session.testData,
-      cookieWillBe: {
-        name: 'budget.sid',
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        httpOnly: true,
-      }
-    });
-  });
-});
-
-// Test endpoint to read session
-app.get('/api/debug/read-cookie', (req, res) => {
-  res.json({
-    success: true,
-    hasSession: !!req.session,
-    sessionID: req.sessionID || 'none',
-    testData: req.session?.testData || 'none',
-    userId: req.session?.userId || 'none',
-    cookies: req.headers.cookie || 'none',
-    customHeader: req.headers['x-session-id'] || 'none',
-  });
-});
-
-// Simple status page to verify you're logged in
+// Status page to verify authentication
 app.get('/api/auth/status', async (req, res) => {
   const customSessionId = req.headers['x-session-id'];
   
