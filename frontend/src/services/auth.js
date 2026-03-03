@@ -32,7 +32,6 @@ export const getSession = async () => {
   
   const response = await fetch(`${API_BASE_URL}/api/auth/session`, {
     method: 'GET',
-    credentials: 'include', // Important: send cookies
     headers,
   });
 
@@ -48,12 +47,15 @@ export const getSession = async () => {
  * Sign out current user
  */
 export const signOut = async () => {
+  const sessionId = localStorage.getItem('sessionId');
+  const headers = {};
+  if (sessionId) {
+    headers['X-Session-Id'] = sessionId;
+  }
+
   const response = await fetch(`${API_BASE_URL}/api/auth/signout`, {
     method: 'POST',
-    credentials: 'include', // Important: send cookies
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
   });
 
   if (!response.ok) {

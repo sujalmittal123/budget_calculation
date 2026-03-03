@@ -17,8 +17,9 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // CRITICAL: Enable credentials to send HTTPOnly cookies
-  withCredentials: true,
+  // Credentials disabled — cross-domain cookies don't work between Vercel and Azure.
+  // Auth is handled via X-Session-Id header instead (set in request interceptor below).
+  withCredentials: false,
 });
 
 // Request interceptor - no longer adds Authorization header
