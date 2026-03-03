@@ -23,9 +23,7 @@ export const getSession = async () => {
   // Get session ID from localStorage (fallback for cross-domain cookie issues)
   const sessionId = localStorage.getItem('sessionId');
   
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  const headers = {};
   
   // Add custom session ID header if available
   if (sessionId) {

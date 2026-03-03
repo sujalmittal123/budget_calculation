@@ -79,6 +79,12 @@ export const useAuthStore = create(
       partialize: (state) => ({
         user: state.user,
       }),
+      // After rehydration, derive isAuthenticated from persisted user
+      onRehydrateStorage: () => (state) => {
+        if (state && state.user) {
+          state.isAuthenticated = true;
+        }
+      },
     }
   )
 );

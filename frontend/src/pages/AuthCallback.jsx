@@ -1,55 +1,72 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores/authStore';
+import { authService } from '../services/auth';
+import { markAuthInitialized } from '../hooks/useAuth';
 import Spinner from '../components/Spinner';
 
 /**
  * OAuth Callback Handler
  * 
  * This page handles the redirect after Google OAuth login.
- * It refreshes the session and redirects to dashboard.
+ * It stores the session ID, fetches the session directly (bypassing useAuth
+ * to avoid race conditions with initAuth), then navigates to the dashboard.
  */
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
+  const setSession = useAuthStore((state) => state.setSession);
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    // Prevent running more than once (React strict mode / re-renders)
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const handleCallback = async () => {
       const success = searchParams.get('success');
       const error = searchParams.get('error');
       const sessionId = searchParams.get('sid'); // Get session ID from URL
 
       if (error) {
-        navigate('/login?error=' + error);
+        navigate('/login?error=' + error, { replace: true });
         return;
       }
 
       if (success === 'true') {
-        // Store session ID in localStorage if provided (fallback for cookie issues)
+        // Store session ID in localStorage BEFORE any API calls
         if (sessionId) {
-          console.log('📝 Storing session ID from URL:', sessionId);
+          console.log('Storing session ID from URL:', sessionId);
           localStorage.setItem('sessionId', sessionId);
         }
         
         // Small delay to ensure backend session is fully saved
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Refresh session to get user data
-        const sessionData = await refreshSession();
-        
-        if (sessionData && sessionData.user) {
-          navigate('/app/dashboard', { replace: true });
-        } else {
-          navigate('/login?error=session_not_found');
+        try {
+          // Fetch session directly — bypasses useAuth's initAuth to avoid race condition
+          const sessionData = await authService.getSession();
+          
+          if (sessionData && sessionData.user) {
+            // Write directly to Zustand store and mark auth as initialized
+            // so useAuth's initAuth doesn't re-run on the next page
+            setSession(sessionData);
+            markAuthInitialized();
+            navigate('/app/dashboard', { replace: true });
+          } else {
+            navigate('/login?error=session_not_found', { replace: true });
+          }
+        } catch (err) {
+          console.error('Failed to fetch session after OAuth callback:', err);
+          navigate('/login?error=session_fetch_failed', { replace: true });
         }
       } else {
-        navigate('/login');
+        navigate('/login', { replace: true });
       }
     };
 
     handleCallback();
-  }, [searchParams, navigate, refreshSession]);
+  }, [searchParams, navigate, setSession]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700">

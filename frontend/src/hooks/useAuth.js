@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/auth';
 import { authAPI } from '../services/api';
@@ -20,6 +20,16 @@ import toast from 'react-hot-toast';
 let authInitialized = false;
 let authInitializing = false;
 
+/**
+ * Mark auth as initialized from outside the hook (e.g., AuthCallback).
+ * This prevents useAuth's initAuth from re-running after AuthCallback
+ * has already fetched and stored the session.
+ */
+export const markAuthInitialized = () => {
+  authInitialized = true;
+  authInitializing = false;
+};
+
 export const useAuth = () => {
   const {
     user,
@@ -40,6 +50,13 @@ export const useAuth = () => {
   useEffect(() => {
     // Prevent multiple initializations globally
     if (authInitialized || authInitializing || initRef.current) {
+      return;
+    }
+
+    // Skip initAuth on the OAuth callback page — AuthCallback handles its own session fetch.
+    // Running initAuth here would race with AuthCallback (no sessionId in localStorage yet)
+    // and call clearAuth(), wiping state before the callback can complete.
+    if (window.location.pathname === '/auth/callback') {
       return;
     }
     
@@ -115,9 +132,9 @@ export const useAuth = () => {
   };
 
   /**
-   * Refresh session
+   * Refresh session (stable reference via useCallback)
    */
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       const sessionData = await authService.getSession();
       
@@ -132,7 +149,7 @@ export const useAuth = () => {
       clearAuth();
       return null;
     }
-  };
+  }, [setSession, clearAuth]);
 
   /**
    * Update user profile
