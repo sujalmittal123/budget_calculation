@@ -1,23 +1,26 @@
 /**
  * Auth API Service
  * Handles authentication with Google OAuth
+ *
+ * In production, all /api/* requests are proxied through Vercel rewrites
+ * to the Azure backend, so they are same-origin (no CORS needed).
+ * Only the OAuth redirect needs the full backend URL (full page navigation).
  */
 
-// Use relative URLs to leverage Vite proxy
-const API_BASE_URL = import.meta.env.PROD 
-  ? import.meta.env.VITE_API_URL || ''
-  : '';
+// Full backend URL — only used for OAuth redirect (full page navigation, not fetch)
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * Initiate Google OAuth sign-in
- * Redirects to backend which then redirects to Google
+ * This is a full page redirect, not a fetch — needs the real backend URL
  */
 export const signInWithGoogle = () => {
-  window.location.href = `${API_BASE_URL}/api/auth/google`;
+  window.location.href = `${BACKEND_URL}/api/auth/google`;
 };
 
 /**
  * Get current user session
+ * Uses relative URL — proxied through Vercel rewrites in production
  */
 export const getSession = async () => {
   // Get session ID from localStorage (fallback for cross-domain cookie issues)
@@ -30,7 +33,7 @@ export const getSession = async () => {
     headers['X-Session-Id'] = sessionId;
   }
   
-  const response = await fetch(`${API_BASE_URL}/api/auth/session`, {
+  const response = await fetch('/api/auth/session', {
     method: 'GET',
     headers,
   });
@@ -45,6 +48,7 @@ export const getSession = async () => {
 
 /**
  * Sign out current user
+ * Uses relative URL — proxied through Vercel rewrites in production
  */
 export const signOut = async () => {
   const sessionId = localStorage.getItem('sessionId');
@@ -53,7 +57,7 @@ export const signOut = async () => {
     headers['X-Session-Id'] = sessionId;
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/auth/signout`, {
+  const response = await fetch('/api/auth/signout', {
     method: 'POST',
     headers,
   });

@@ -2,24 +2,22 @@ import axios from 'axios';
 
 /**
  * Axios API Configuration
- * 
- * Updated for Better-Auth with HTTPOnly cookies.
- * No longer uses Authorization headers - sessions handled by cookies.
+ *
+ * In production, all /api/* requests are proxied through Vercel rewrites
+ * to the Azure backend (same-origin, no CORS). In development, Vite proxy
+ * handles the same thing.
+ *
+ * Auth is handled via X-Session-Id header (set in request interceptor).
  */
 
-// In production, use the environment variable; in development, use proxy
-const baseURL = import.meta.env.PROD 
-  ? import.meta.env.VITE_API_URL || '/api'
-  : '/api';
+// Always use relative /api path — proxied by Vercel (prod) or Vite (dev)
+const baseURL = '/api';
 
 const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
-  // Credentials disabled — cross-domain cookies don't work between Vercel and Azure.
-  // Auth is handled via X-Session-Id header instead (set in request interceptor below).
-  withCredentials: false,
 });
 
 // Request interceptor - no longer adds Authorization header
