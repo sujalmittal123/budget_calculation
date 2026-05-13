@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#4338ca"/>
+    </linearGradient>
+  </defs>
+  <!-- Full background (maskable icons need full bleed) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Wallet body - scaled down to fit in safe zone (inner 80%) -->
+  <rect x="132" y="192" width="248" height="170" rx="20" ry="20" fill="white" opacity="0.95"/>
+  <!-- Wallet flap -->
+  <path d="M132 224 Q132 192 164 192 L348 170 Q380 166 380 198 L380 224 Z" fill="white" opacity="0.85"/>
+  <!-- Card slot area -->
+  <rect x="280" y="258" width="100" height="56" rx="12" ry="12" fill="#4338ca" opacity="0.15"/>
+  <!-- Coin -->
+  <circle cx="330" cy="286" r="22" fill="#6366f1" opacity="0.9"/>
+  <!-- Dollar sign -->
+  <text x="330" y="296" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="white" text-anchor="middle">$</text>
+  <!-- Lines -->
+  <rect x="160" y="232" width="100" height="7" rx="3.5" fill="#6366f1" opacity="0.2"/>
+  <rect x="160" y="255" width="84" height="7" rx="3.5" fill="#6366f1" opacity="0.15"/>
+  <rect x="160" y="278" width="68" height="7" rx="3.5" fill="#6366f1" opacity="0.1"/>
+</svg>

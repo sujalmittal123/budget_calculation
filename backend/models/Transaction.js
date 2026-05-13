@@ -26,7 +26,7 @@ const TransactionSchema = new mongoose.Schema({
       'Salary', 'Freelance', 'Investment', 'Gift', 'Other Income',
       // Expense categories
       'Food & Dining', 'Transportation', 'Shopping', 'Entertainment',
-      'Bills & Utilities', 'Healthcare', 'Education', 'Rent', 'Insurance', 'Other Expense'
+      'Bills & Utilities', 'Healthcare', 'Education', 'Rent', 'Insurance', 'UPI Payment', 'Other Expense'
     ],
     required: [true, 'Please specify category']
   },
@@ -65,7 +65,12 @@ const TransactionSchema = new mongoose.Schema({
   },
   recurringPeriod: {
     type: String,
-    enum: ['daily', 'weekly', 'monthly', 'yearly', null],
+    enum: ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly', null],
+    default: null
+  },
+  recurringTransactionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RecurringTransaction',
     default: null
   },
   createdAt: {

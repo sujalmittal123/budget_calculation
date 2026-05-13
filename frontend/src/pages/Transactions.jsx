@@ -1,24 +1,29 @@
-import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import {
-  FiPlus,
-  FiEdit2,
-  FiTrash2,
-  FiFilter,
-  FiDownload,
-  FiUpload,
-  FiSearch,
-  FiX,
   FiChevronLeft,
   FiChevronRight,
+  FiDownload,
+  FiEdit2,
+  FiFilter,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+  FiUpload,
+  FiX,
 } from 'react-icons/fi';
-import { format } from 'date-fns';
-import { transactionsAPI, bankAccountsAPI, exportAPI } from '../services/api';
 import Modal from '../components/Modal';
 import Spinner from '../components/Spinner';
-import toast from 'react-hot-toast';
-import { getCategoriesByType, getSubcategories, getCategoryIcon, getCategoryColor } from '../constants/categories';
-import { formatCurrency as formatCurrencyUtil } from '../utils/currency';
+import {
+  getCategoriesByType,
+  getCategoryColor,
+  getCategoryIcon,
+  getSubcategories,
+} from '../constants/categories';
 import { useAuth } from '../hooks/useAuth';
+import { bankAccountsAPI, exportAPI, transactionsAPI } from '../services/api';
+import { formatCurrency as formatCurrencyUtil } from '../utils/currency';
 
 const Transactions = () => {
   const { user } = useAuth();
@@ -31,7 +36,7 @@ const Transactions = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
-  
+
   // Filter state
   const [filters, setFilters] = useState({
     startDate: '',
@@ -63,8 +68,7 @@ const Transactions = () => {
     try {
       const response = await bankAccountsAPI.getAll();
       setBankAccounts(response.data.data);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const fetchTransactions = async (page = 1) => {
@@ -72,8 +76,8 @@ const Transactions = () => {
       setLoading(true);
       const params = { page, limit: 15, ...filters };
       // Remove empty filters
-      Object.keys(params).forEach(key => !params[key] && delete params[key]);
-      
+      Object.keys(params).forEach((key) => !params[key] && delete params[key]);
+
       const response = await transactionsAPI.getAll(params);
       setTransactions(response.data.data);
       setPagination({
@@ -107,7 +111,7 @@ const Transactions = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this transaction?')) return;
-    
+
     try {
       await transactionsAPI.delete(id);
       toast.success('Transaction deleted');
@@ -231,46 +235,41 @@ const Transactions = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Transactions
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage your income and expenses
-          </p>
+          <p className="text-muted-foreground mt-1">Manage your income and expenses</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setIsFilterOpen(true)}
-            className="btn-secondary flex items-center gap-2"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg font-medium flex items-center gap-2"
           >
             <FiFilter className="w-4 h-4" />
             Filters
             {activeFiltersCount > 0 && (
-              <span className="bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+              <span className="bg-primary text-white text-xs px-1.5 py-0.5 rounded-full">
                 {activeFiltersCount}
               </span>
             )}
           </button>
-          <button
-            onClick={handleExportCSV}
-            className="btn-secondary flex items-center gap-2"
-          >
+          <button onClick={handleExportCSV} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg font-medium flex items-center gap-2">
             <FiDownload className="w-4 h-4" />
             Export
           </button>
           <button
             onClick={() => setIsImportOpen(true)}
-            className="btn-secondary flex items-center gap-2"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg font-medium flex items-center gap-2"
           >
             <FiUpload className="w-4 h-4" />
             Import
           </button>
           <button
             onClick={() => {
-              setFormData(prev => ({ ...prev, bankId: bankAccounts[0]?._id || '' }));
+              setFormData((prev) => ({ ...prev, bankId: bankAccounts[0]?._id || '' }));
               setIsModalOpen(true);
             }}
-            className="btn-primary flex items-center gap-2"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium flex items-center gap-2"
           >
             <FiPlus className="w-4 h-4" />
             Add Transaction
@@ -280,63 +279,64 @@ const Transactions = () => {
 
       {/* Search Bar */}
       <div className="relative">
-        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
         <input
           type="text"
           placeholder="Search transactions..."
           value={filters.search}
-          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
           onKeyPress={(e) => e.key === 'Enter' && fetchTransactions(1)}
-          className="input pl-10"
+          className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring pl-10"
         />
       </div>
 
       {/* Transactions Table */}
-      <div className="card overflow-hidden">
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner />
           </div>
         ) : transactions.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">No transactions found</p>
+            <p className="text-muted-foreground">No transactions found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <thead className="bg-background">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Description
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Category
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Bank
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="divide-y divide-border">
                   {transactions.map((transaction) => (
-                    <tr key={transaction._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <tr
+                      key={transaction._id}
+                      className="hover:bg-background"
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                         {format(new Date(transaction.date), 'MMM dd, yyyy')}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                        <div className="max-w-xs truncate">
-                          {transaction.description || '-'}
-                        </div>
+                      <td className="px-4 py-3 text-sm text-foreground">
+                        <div className="max-w-xs truncate">{transaction.description || '-'}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -346,28 +346,26 @@ const Transactions = () => {
                             return Icon ? <Icon className="w-4 h-4" style={{ color }} /> : null;
                           })()}
                           <div className="flex flex-col gap-1">
-                            <span className="text-sm text-gray-900 dark:text-white">
+                            <span className="text-sm text-foreground">
                               {transaction.category}
                             </span>
                             {transaction.subcategory && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                              <span className="text-xs text-muted-foreground">
                                 {transaction.subcategory}
                               </span>
                             )}
                           </div>
-                          <span className={`badge-${transaction.type} ml-2`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-2 ${transaction.type === 'income' ? 'bg-chart-2/10 text-chart-2' : 'bg-destructive/10 text-destructive'}`}>
                             {transaction.type}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">
                         {transaction.bankId?.bankName || '-'}
                       </td>
-                      <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
-                        transaction.type === 'income' 
-                          ? 'text-success-600 dark:text-success-400' 
-                          : 'text-danger-600 dark:text-danger-400'
-                      }`}>
+                      <td
+                        className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${ transaction.type === 'income' ? 'text-chart-2 ' : 'text-destructive ' }`}
+                      >
                         {transaction.type === 'income' ? '+' : '-'}
                         {formatCurrency(transaction.amount)}
                       </td>
@@ -375,13 +373,13 @@ const Transactions = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleEdit(transaction)}
-                            className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-lg transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                           >
                             <FiEdit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(transaction._id)}
-                            className="p-1.5 text-gray-500 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-500/10 rounded-lg transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                           >
                             <FiTrash2 className="w-4 h-4" />
                           </button>
@@ -394,25 +392,25 @@ const Transactions = () => {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+              <p className="text-sm text-muted-foreground">
                 Showing {transactions.length} of {pagination.total} transactions
               </p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => fetchTransactions(pagination.page - 1)}
                   disabled={pagination.page <= 1}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-lg hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FiChevronLeft className="w-5 h-5" />
                 </button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   Page {pagination.page} of {pagination.pages}
                 </span>
                 <button
                   onClick={() => fetchTransactions(pagination.page + 1)}
                   disabled={pagination.page >= pagination.pages}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-lg hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FiChevronRight className="w-5 h-5" />
                 </button>
@@ -431,22 +429,22 @@ const Transactions = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Type</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
               <select
                 value={formData.type}
                 onChange={(e) => handleTypeChange(e.target.value)}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               >
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
               </select>
             </div>
             <div>
-              <label className="label">Category</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
               <select
                 value={formData.category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value="">Select Category</option>
@@ -462,11 +460,11 @@ const Transactions = () => {
           {/* Subcategory - Only show if category has subcategories */}
           {formData.category && getSubcategories(formData.category).length > 0 && (
             <div>
-              <label className="label">Subcategory (Optional)</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Subcategory (Optional)</label>
               <select
                 value={formData.subcategory}
                 onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select Subcategory</option>
                 {getSubcategories(formData.category).map((sub) => (
@@ -480,44 +478,44 @@ const Transactions = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Amount</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Amount</label>
               <input
                 type="number"
                 step="0.01"
                 min="0.01"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
                 placeholder="0.00"
                 required
               />
             </div>
             <div>
-              <label className="label">Date</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Date</label>
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="label">Payment Method</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Payment Method</label>
             <select
               value={formData.paymentMethod}
               onChange={(e) => {
                 const method = e.target.value;
-                setFormData({ 
-                  ...formData, 
+                setFormData({
+                  ...formData,
                   paymentMethod: method,
                   // Clear bankId if cash is selected
-                  bankId: method === 'cash' ? '' : formData.bankId || bankAccounts[0]?._id || ''
+                  bankId: method === 'cash' ? '' : formData.bankId || bankAccounts[0]?._id || '',
                 });
               }}
-              className="input"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
             >
               <option value="card">Card</option>
               <option value="cash">Cash</option>
@@ -531,11 +529,11 @@ const Transactions = () => {
           {/* Bank Account - Only required if not cash */}
           {formData.paymentMethod !== 'cash' && (
             <div>
-              <label className="label">Bank Account</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Bank Account</label>
               <select
                 value={formData.bankId}
                 onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value="">Select Bank Account</option>
@@ -549,21 +547,21 @@ const Transactions = () => {
           )}
 
           <div>
-            <label className="label">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               rows="3"
               placeholder="Enter description..."
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <button type="button" onClick={closeModal} className="btn-secondary">
+            <button type="button" onClick={closeModal} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg font-medium">
               Cancel
             </button>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium">
               {editingTransaction ? 'Update' : 'Add'} Transaction
             </button>
           </div>
@@ -571,35 +569,39 @@ const Transactions = () => {
       </Modal>
 
       {/* Filter Modal */}
-      <Modal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} title="Filter Transactions">
+      <Modal
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        title="Filter Transactions"
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Start Date</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Start Date</label>
               <input
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
             </div>
             <div>
-              <label className="label">End Date</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">End Date</label>
               <input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                className="input"
+                className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
 
           <div>
-            <label className="label">Type</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
             <select
               value={filters.type}
               onChange={(e) => setFilters({ ...filters, type: e.target.value, category: '' })}
-              className="input"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
             >
               <option value="">All Types</option>
               <option value="income">Income</option>
@@ -608,11 +610,11 @@ const Transactions = () => {
           </div>
 
           <div>
-            <label className="label">Category</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
             <select
               value={filters.category}
               onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-              className="input"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
             >
               <option value="">All Categories</option>
               {filters.type ? (
@@ -643,11 +645,11 @@ const Transactions = () => {
           </div>
 
           <div>
-            <label className="label">Bank Account</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Bank Account</label>
             <select
               value={filters.bankId}
               onChange={(e) => setFilters({ ...filters, bankId: e.target.value })}
-              className="input"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
             >
               <option value="">All Accounts</option>
               {bankAccounts.map((bank) => (
@@ -659,10 +661,10 @@ const Transactions = () => {
           </div>
 
           <div className="flex justify-between pt-4">
-            <button type="button" onClick={clearFilters} className="btn-secondary">
+            <button type="button" onClick={clearFilters} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg font-medium">
               Clear Filters
             </button>
-            <button type="button" onClick={applyFilters} className="btn-primary">
+            <button type="button" onClick={applyFilters} className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium">
               Apply Filters
             </button>
           </div>
@@ -670,14 +672,18 @@ const Transactions = () => {
       </Modal>
 
       {/* Import Modal */}
-      <Modal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import Transactions from CSV">
+      <Modal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        title="Import Transactions from CSV"
+      >
         <div className="space-y-4">
           <div>
-            <label className="label">Select Bank Account</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Select Bank Account</label>
             <select
               value={formData.bankId}
               onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
-              className="input"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               required
             >
               <option value="">Select Bank Account</option>
@@ -689,15 +695,13 @@ const Transactions = () => {
             </select>
           </div>
 
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-            <FiUpload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-2">
-              Upload a CSV file with columns:
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+          <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+            <FiUpload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground mb-2">Upload a CSV file with columns:</p>
+            <p className="text-sm text-muted-foreground mb-4">
               date, type, category, amount, description, paymentMethod
             </p>
-            <label className="btn-primary cursor-pointer inline-block">
+            <label className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium cursor-pointer inline-block">
               Choose File
               <input
                 type="file"

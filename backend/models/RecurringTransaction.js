@@ -189,8 +189,33 @@ RecurringTransactionSchema.pre('save', function(next) {
 
 // Calculate next due date based on frequency
 RecurringTransactionSchema.methods.calculateNextDueDate = function() {
-  const current = this.nextDueDate || this.startDate;
+  const current = this.nextDueDate || this.startDate || new Date();
   let next = new Date(current);
+
+  const getAnchoredDayOfMonth = () => {
+    if (Number.isInteger(this.dayOfMonth) && this.dayOfMonth >= 1 && this.dayOfMonth <= 31) {
+      return this.dayOfMonth;
+    }
+    return next.getDate();
+  };
+
+  const addMonthsWithAnchor = (monthsToAdd) => {
+    const anchoredDay = getAnchoredDayOfMonth();
+    const target = new Date(next);
+
+    // Avoid JS Date overflow (e.g., Jan 31 -> Mar 03) before month math.
+    target.setDate(1);
+    target.setMonth(target.getMonth() + monthsToAdd);
+
+    const lastDayOfTargetMonth = new Date(
+      target.getFullYear(),
+      target.getMonth() + 1,
+      0
+    ).getDate();
+
+    target.setDate(Math.min(anchoredDay, lastDayOfTargetMonth));
+    return target;
+  };
   
   switch (this.frequency) {
     case 'daily':
@@ -203,17 +228,13 @@ RecurringTransactionSchema.methods.calculateNextDueDate = function() {
       next.setDate(next.getDate() + 14);
       break;
     case 'monthly':
-      next.setMonth(next.getMonth() + 1);
-      // Adjust for different month lengths
-      if (this.dayOfMonth) {
-        next.setDate(Math.min(this.dayOfMonth, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
-      }
+      next = addMonthsWithAnchor(1);
       break;
     case 'quarterly':
-      next.setMonth(next.getMonth() + 3);
+      next = addMonthsWithAnchor(3);
       break;
     case 'yearly':
-      next.setFullYear(next.getFullYear() + 1);
+      next = addMonthsWithAnchor(12);
       break;
   }
   
@@ -250,6 +271,7 @@ RecurringTransactionSchema.methods.generateTransaction = async function() {
     date: this.nextDueDate,
     isRecurring: true,
     recurringPeriod: this.frequency,
+    recurringTransactionId: this._id,
     tags: [...this.tags, 'auto-generated']
   });
   

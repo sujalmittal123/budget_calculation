@@ -1,371 +1,496 @@
-# 💰 Budget Tracker - Personal Finance Management Application
+# 💸 Budget Tracker (Budget_calulation)
 
-A full-stack web application to help users track personal expenses, business expenses, and day-to-day bank transactions with beautiful charts and comprehensive reporting.
-
-![Budget Tracker](https://img.shields.io/badge/Status-Ready%20to%20Use-success)
-![React](https://img.shields.io/badge/React-18.2-blue)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![MongoDB](https://img.shields.io/badge/MongoDB-8.0-brightgreen)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4-38B2AC)
-
-## ✨ Features
-
-### 🔐 Authentication
-- Google OAuth 2.0 authentication
-- Session-based authentication with express-session
-- Hybrid authentication (cookie + custom header for cross-domain)
-- Secure session management
-
-### 💸 Transaction Management
-- Add, edit, and delete transactions
-- Transaction types: Income and Expense
-- Categories: Personal and Business
-- Multiple payment methods support (Card, Cash, UPI, Bank Transfer, Cheque)
-
-### 🏦 Bank Account Tracking
-- Add multiple bank accounts per user
-- Track balance for each bank account
-- Link transactions to bank accounts
-- Automatic balance updates on each transaction
-
-### 📊 Budget Calculations
-- Monthly total income and expenses
-- Remaining balance (income – expenses)
-- Category-wise expense calculation
-- Bank-wise balance calculation
-- Monthly budget limit alerts
-
-### 📈 Dashboard
-- Summary cards (Income, Expense, Balance)
-- Interactive charts for:
-  - Income vs Expense trends (12 months)
-  - Category-wise expense breakdown
-  - Monthly spending comparison
-  - Payment method analysis
-
-### 🔍 Filters
-- Filter transactions by date range
-- Filter by category (personal/business)
-- Filter by bank account
-- Filter by transaction type (income/expense)
-- Search by description
-
-### 📁 Import/Export
-- CSV import for bank statements
-- Export transactions as CSV
-- Export reports as PDF
-
-### 🔄 Recurring Transactions
-- AI-powered pattern detection from transaction history
-- Automatic generation of recurring transactions
-- Manual management of recurring items
-- Pause/Resume functionality
-
-### 🌙 Dark Mode
-- Full dark mode support
-- System preference detection
-
-## 🧱 Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Frontend | React.js 18, Tailwind CSS 3.4, Vite, Zustand |
-| Charts | Recharts |
-| Backend | Node.js, Express.js |
-| Database | MongoDB with Mongoose |
-| Auth | Google OAuth 2.0, express-session |
-| PDF | PDFKit |
-| CSV | csv-parse |
-| Deployment | Docker, Azure Container Apps |
-
-## 📁 Project Structure
-
-```
-Budget_calulation/
-├── backend/
-│   ├── middleware/
-│   │   ├── auth.js           # JWT authentication middleware
-│   │   └── validate.js       # Request validation middleware
-│   ├── models/
-│   │   ├── User.js           # User schema
-│   │   ├── BankAccount.js    # Bank account schema
-│   │   └── Transaction.js    # Transaction schema
-│   ├── routes/
-│   │   ├── auth.js           # Authentication routes
-│   │   ├── bankAccounts.js   # Bank account CRUD
-│   │   ├── transactions.js   # Transaction CRUD + CSV import
-│   │   ├── dashboard.js      # Dashboard analytics
-│   │   └── export.js         # CSV/PDF export
-│   ├── server.js             # Express server entry
-│   ├── package.json
-│   └── .env
-│
-└── frontend/
-    ├── src/
-    │   ├── components/
-    │   │   ├── Layout.jsx        # Main layout with sidebar
-    │   │   ├── Modal.jsx         # Reusable modal component
-    │   │   ├── PrivateRoute.jsx  # Auth route protection
-    │   │   └── Spinner.jsx       # Loading spinner
-    │   ├── context/
-    │   │   ├── AuthContext.jsx   # Authentication state
-    │   │   └── ThemeContext.jsx  # Dark mode state
-    │   ├── pages/
-    │   │   ├── Dashboard.jsx     # Main dashboard with charts
-    │   │   ├── Transactions.jsx  # Transaction management
-    │   │   ├── BankAccounts.jsx  # Bank account management
-    │   │   ├── Reports.jsx       # Detailed reports
-    │   │   ├── Settings.jsx      # User settings
-    │   │   ├── Login.jsx         # Login page
-    │   │   └── Register.jsx      # Registration page
-    │   ├── services/
-    │   │   └── api.js            # Axios API configuration
-    │   ├── App.jsx
-    │   ├── main.jsx
-    │   └── index.css
-    ├── index.html
-    ├── package.json
-    ├── tailwind.config.js
-    ├── postcss.config.js
-    └── vite.config.js
-```
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 18 or higher
-- MongoDB (local or cloud - MongoDB Atlas)
-- npm or yarn
-
-### 1. Clone the Repository
-
-```bash
-cd Budget_calulation
-```
-
-### 2. Backend Setup
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Install dependencies
-npm install
-
-# Create .env file (already created, but update if needed)
-# Edit .env with your MongoDB connection string
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/budget_tracker
-JWT_SECRET=your_super_secret_jwt_key_here
-JWT_EXPIRE=7d
-NODE_ENV=development
-
-# Start the backend server
-npm run dev
-```
-
-### 3. Frontend Setup
-
-```bash
-# Open a new terminal
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-```
-
-### 4. Access the Application
-
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-
-## 📖 API Documentation
-
-### Authentication Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register a new user |
-| POST | `/api/auth/login` | Login user |
-| GET | `/api/auth/me` | Get current user |
-| PUT | `/api/auth/profile` | Update user profile |
-| PUT | `/api/auth/password` | Change password |
-
-### Bank Account Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/bank-accounts` | Get all bank accounts |
-| GET | `/api/bank-accounts/:id` | Get single bank account |
-| POST | `/api/bank-accounts` | Create bank account |
-| PUT | `/api/bank-accounts/:id` | Update bank account |
-| DELETE | `/api/bank-accounts/:id` | Delete bank account |
-
-### Transaction Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/transactions` | Get transactions (with filters) |
-| GET | `/api/transactions/:id` | Get single transaction |
-| POST | `/api/transactions` | Create transaction |
-| PUT | `/api/transactions/:id` | Update transaction |
-| DELETE | `/api/transactions/:id` | Delete transaction |
-| POST | `/api/transactions/import-csv` | Import from CSV |
-| DELETE | `/api/transactions/bulk` | Bulk delete |
-
-### Dashboard Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/dashboard/summary` | Get monthly summary |
-| GET | `/api/dashboard/category-breakdown` | Get category breakdown |
-| GET | `/api/dashboard/monthly-trend` | Get 12-month trend |
-| GET | `/api/dashboard/bank-summary` | Get bank-wise summary |
-| GET | `/api/dashboard/recent-transactions` | Get recent transactions |
-| GET | `/api/dashboard/payment-method-breakdown` | Get payment method breakdown |
-
-### Export Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/export/transactions/csv` | Export transactions as CSV |
-| GET | `/api/export/report/pdf` | Export monthly report as PDF |
-
-## 📊 Database Models
-
-### User Model
-```javascript
-{
-  name: String,
-  email: String (unique),
-  password: String (hashed),
-  monthlyBudgetLimit: Number,
-  preferences: {
-    darkMode: Boolean,
-    currency: String
-  },
-  createdAt: Date
-}
-```
-
-### BankAccount Model
-```javascript
-{
-  userId: ObjectId,
-  bankName: String,
-  accountNumber: String (masked for display),
-  accountType: 'savings' | 'checking' | 'credit' | 'business',
-  balance: Number,
-  initialBalance: Number,
-  currency: String,
-  color: String,
-  isActive: Boolean
-}
-```
-
-### Transaction Model
-```javascript
-{
-  userId: ObjectId,
-  bankId: ObjectId,
-  type: 'income' | 'expense',
-  category: 'personal' | 'business',
-  amount: Number,
-  paymentMethod: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'cheque' | 'other',
-  description: String,
-  date: Date,
-  tags: [String],
-  isRecurring: Boolean,
-  recurringPeriod: 'daily' | 'weekly' | 'monthly' | 'yearly'
-}
-```
-
-## 📝 CSV Import Format
-
-When importing transactions via CSV, use the following columns:
-
-```csv
-date,type,category,amount,description,paymentMethod
-2024-01-15,expense,personal,50.00,Groceries,card
-2024-01-16,income,business,1000.00,Freelance payment,bank_transfer
-```
-
-## 🔧 Environment Variables
-
-### Backend (.env)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 5000 |
-| `MONGODB_URI` | MongoDB connection string | - |
-| `JWT_SECRET` | JWT signing secret | - |
-| `JWT_EXPIRE` | JWT expiration time | 7d |
-| `NODE_ENV` | Environment | development |
-
-## 🎨 Screenshots
-
-### Dashboard
-- Clean summary cards showing income, expense, and balance
-- Interactive area charts for trends
-- Pie charts for category breakdown
-- Bar charts for monthly comparison
-
-### Transactions
-- Paginated transaction list
-- Easy filtering and search
-- Quick add/edit modal
-- Bulk operations support
-
-### Bank Accounts
-- Card-style account display
-- Color-coded accounts
-- Quick balance overview
-- Transaction count per account
-
-### Reports
-- Month/year selector
-- PDF export functionality
-- Multiple chart types
-- Detailed category breakdown
-
-### Settings
-- Profile management
-- Budget limit configuration
-- Dark mode toggle
-- Password change
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 📚 Documentation
-
-- [Azure Deployment Guide](./docs/AZURE_DEPLOYMENT_GUIDE.md) - Complete guide for deploying to Azure
-- [Recurring Transactions Guide](./docs/RECURRING_TRANSACTIONS_GUIDE.md) - Feature documentation
-- [Sprint 1 Summary](./docs/SPRINT1_SUMMARY.md) - Development summary
-
-## 🙏 Acknowledgments
-
-- [React](https://reactjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Recharts](https://recharts.org/)
-- [Express.js](https://expressjs.com/)
-- [MongoDB](https://www.mongodb.com/)
-- [React Icons](https://react-icons.github.io/react-icons/)
+Full-stack personal finance app for tracking income, expenses, bank balances, recurring transactions, daily notes, and reporting analytics.
 
 ---
 
-Built with ❤️ for better personal finance management
+## Table of Contents
+
+- [What this project does](#what-this-project-does)
+- [Core features](#core-features)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Repository structure](#repository-structure)
+- [Getting started (local development)](#getting-started-local-development)
+- [Environment variables](#environment-variables)
+- [Google OAuth setup](#google-oauth-setup)
+- [Available scripts](#available-scripts)
+- [API reference](#api-reference)
+- [Data models](#data-models)
+- [PWA / offline support](#pwa--offline-support)
+- [Testing & code quality](#testing--code-quality)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## What this project does
+
+Budget Tracker helps users:
+
+- sign in with Google,
+- connect and manage multiple bank accounts,
+- add and filter income/expense transactions,
+- detect and automate recurring payments/income,
+- track daily notes + burn rate,
+- generate charts, CSV exports, and PDF reports,
+- use the app as a Progressive Web App (PWA) with offline awareness.
+
+---
+
+## Core features
+
+### Authentication
+- Google OAuth login flow
+- Session-based auth (`express-session` + `connect-mongo`)
+- Cookie auth with `X-Session-Id` fallback for cross-domain/session-cookie edge cases
+
+### Transaction management
+- Create, update, delete, list transactions
+- Filters: date range, type, category, bank account, payment method, search
+- CSV import for bank/transaction data
+- Bulk delete
+
+### Bank accounts
+- Multiple accounts per user
+- Masked account numbers in responses
+- Balance tracking with automatic recalculation based on linked transactions
+- Soft delete when linked transactions exist
+
+### Dashboard & reports
+- Monthly and all-time summary
+- Category breakdown
+- 12-month trend
+- Bank-wise summary
+- Recent transactions
+- Payment method analytics
+
+### Daily notes & burn rate
+- Add per-day notes and highlights
+- Fetch per-day transactions and totals
+- Monthly burn-rate projection and weekly breakdown
+
+### Recurring transactions
+- CRUD for recurring templates
+- AI/pattern-based recurring detection from historical transactions
+- Approve single/batch detected patterns
+- Pause/resume templates
+- Auto-generation by cron job (daily)
+
+### Exports
+- Transactions CSV export
+- Monthly PDF report export
+
+### UX extras
+- Dark mode
+- Responsive dashboard UI
+- PWA install prompt
+- Offline/online banner
+
+---
+
+## Tech stack
+
+### Frontend
+- React 18
+- Vite
+- Tailwind CSS 4
+- Zustand (auth store)
+- React Router
+- Recharts
+- Axios
+- Vite PWA plugin
+
+### Backend
+- Node.js + Express
+- MongoDB + Mongoose
+- express-session + connect-mongo
+- Google OAuth (`google-auth-library`)
+- `csv-parse`, `multer`, `pdfkit`
+- `node-cron`
+- Security middleware: `helmet`, rate-limiter, mongo sanitize
+
+---
+
+## Architecture
+
+```text
+Frontend (React + Vite)
+  ├─ /api/* calls (relative path)
+  ├─ Auth callback handling (/auth/callback)
+  └─ Dashboard / Transactions / Reports / Settings / etc.
+
+Backend (Express API)
+  ├─ Session auth + Google OAuth routes
+  ├─ Business routes (transactions, banks, dashboard, recurring)
+  ├─ Export routes (CSV/PDF)
+  └─ Cron job: generate recurring transactions daily
+
+Database
+  ├─ Users
+  ├─ BankAccounts
+  ├─ Transactions
+  ├─ RecurringTransactions
+  └─ DailyNotes
+```
+
+---
+
+## Repository structure
+
+```text
+Budget_calulation/
+├── backend/
+│   ├── jobs/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   └── server.js
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── stores/
+│   └── vite.config.js
+├── docs/
+├── scripts/
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+## Getting started (local development)
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+- MongoDB running locally or cloud MongoDB URI
+- Google OAuth credentials
+
+### 1) Clone and install
+
+```bash
+git clone <your-repo-url>
+cd Budget_calulation
+```
+
+Install deps (manual):
+
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+Or use helper script:
+
+```bash
+./scripts/setup.sh
+```
+
+### 2) Configure environment
+
+Create env files from examples:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Update values (see [Environment variables](#environment-variables)).
+
+### 3) Run backend
+
+```bash
+cd backend
+npm run dev
+```
+
+API health: `http://localhost:5000/api/health`
+
+### 4) Run frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+App URL: `http://localhost:5173`
+
+---
+
+## Environment variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Notes |
+|---|---|---|
+| `PORT` | No | Default `5000` |
+| `MONGODB_URI` | Yes | Mongo connection string |
+| `SESSION_SECRET` | Yes | Session encryption secret |
+| `NODE_ENV` | No | `development` / `production` |
+| `FRONTEND_URL` | Yes | Used for CORS + OAuth redirects |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth secret |
+| `GOOGLE_REDIRECT_URI` | Yes | e.g. `http://localhost:5000/api/auth/google/callback` |
+| `JWT_SECRET` | Legacy/optional | Present in `.env.example`, not used in current session-based auth flow |
+| `JWT_EXPIRE` | Legacy/optional | Present in `.env.example`, not used in current session-based auth flow |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Required | Notes |
+|---|---|---|
+| `VITE_API_URL` | Yes | Used for OAuth redirect target and dev proxy target |
+| `VITE_GOOGLE_CLIENT_ID` | Optional currently | Present in example env |
+
+---
+
+## Google OAuth setup
+
+In Google Cloud Console:
+
+1. Create OAuth client credentials.
+2. Add **Authorized JavaScript Origins**:
+   - `http://localhost:5173`
+   - your production frontend URL
+3. Add **Authorized Redirect URI**:
+   - `http://localhost:5000/api/auth/google/callback`
+   - your production backend callback URL
+4. Put those values in backend/frontend env files.
+
+---
+
+## Available scripts
+
+### Root helper scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/setup.sh` | Install backend + frontend dependencies |
+| `scripts/start.sh` | Start backend and frontend (includes process cleanup) |
+| `scripts/stop.sh` | Stop running backend/frontend processes |
+| `scripts/build.sh` | Build backend (if TS) and frontend |
+
+> Note: `scripts/start.sh` and `scripts/stop.sh` use absolute paths from the original dev machine. Update paths if needed in your environment.
+
+### Backend (`backend/package.json`)
+
+- `npm run dev` – nodemon server
+- `npm start` – production start
+- `npm test` – vitest
+- `npm run type-check` – TypeScript check
+- `npm run build-ts` – build TS output (migration path)
+
+### Frontend (`frontend/package.json`)
+
+- `npm run dev` – Vite dev server
+- `npm run build` – production build
+- `npm run preview` – preview build
+- `npm run lint` – biome check
+- `npm run format` – biome format write
+- `npm run check` / `check:ci` – quality checks
+
+---
+
+## API reference
+
+Base URL: `/api`
+
+### Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/auth/google` | Start Google OAuth |
+| GET | `/auth/google/callback` | OAuth callback handler |
+| POST | `/auth/google` | Credential-based Google login |
+| GET | `/auth/session` | Get current session user |
+| POST | `/auth/signout` | Logout session |
+| GET | `/auth/me` | Current user (protected) |
+| PUT | `/auth/profile` | Update profile (protected) |
+| GET | `/auth/status` | Session debug page |
+
+### Bank Accounts
+
+| Method | Endpoint |
+|---|---|
+| GET | `/bank-accounts` |
+| GET | `/bank-accounts/:id` |
+| POST | `/bank-accounts` |
+| PUT | `/bank-accounts/:id` |
+| DELETE | `/bank-accounts/:id` |
+| GET | `/bank-accounts/:id/transactions` |
+
+### Transactions
+
+| Method | Endpoint |
+|---|---|
+| GET | `/transactions` |
+| GET | `/transactions/:id` |
+| POST | `/transactions` |
+| PUT | `/transactions/:id` |
+| DELETE | `/transactions/:id` |
+| POST | `/transactions/import-csv` |
+| DELETE | `/transactions/bulk` |
+
+### Dashboard
+
+| Method | Endpoint |
+|---|---|
+| GET | `/dashboard/summary` |
+| GET | `/dashboard/category-breakdown` |
+| GET | `/dashboard/monthly-trend` |
+| GET | `/dashboard/bank-summary` |
+| GET | `/dashboard/recent-transactions` |
+| GET | `/dashboard/payment-method-breakdown` |
+
+### Daily Notes
+
+| Method | Endpoint |
+|---|---|
+| GET | `/daily-notes` |
+| GET | `/daily-notes/:date` |
+| POST | `/daily-notes` |
+| DELETE | `/daily-notes/:date` |
+| GET | `/daily-notes/stats/burn-rate` |
+
+### Recurring
+
+| Method | Endpoint |
+|---|---|
+| GET | `/recurring` |
+| GET | `/recurring/detect` |
+| POST | `/recurring/detect/approve` |
+| POST | `/recurring/batch/approve` |
+| DELETE | `/recurring/batch/delete` |
+| GET | `/recurring/upcoming` |
+| GET | `/recurring/:id` |
+| POST | `/recurring` |
+| PUT | `/recurring/:id` |
+| DELETE | `/recurring/:id` |
+| PATCH | `/recurring/:id/pause` |
+| PATCH | `/recurring/:id/resume` |
+| POST | `/recurring/:id/generate` |
+| GET | `/recurring/:id/history` |
+
+### Export
+
+| Method | Endpoint |
+|---|---|
+| GET | `/export/transactions/csv` |
+| GET | `/export/report/pdf` |
+
+---
+
+## Data models
+
+### `User`
+- Profile: name, email, image, emailVerified
+- Preferences: darkMode, currency
+- Budget: monthlyBudgetLimit
+
+### `BankAccount`
+- bankName, accountNumber, accountType, currency
+- initialBalance, current balance
+- masked account number helper
+
+### `Transaction`
+- type (`income`/`expense`), category, subcategory
+- amount, paymentMethod, date, description, tags
+- optional bank link
+- recurring flags (`isRecurring`, `recurringPeriod`)
+
+### `RecurringTransaction`
+- template fields: amount, category, description, payment method
+- schedule: frequency, start/end, nextDueDate
+- detection metadata: confidence, source transactions
+- generation helpers (`isDue`, `generateTransaction`)
+
+### `DailyNote`
+- date, notes, mood, dailyBudget/dailyTarget, highlights, tags
+
+---
+
+## PWA / offline support
+
+Frontend uses `vite-plugin-pwa` with:
+
+- web app manifest,
+- service worker auto-update,
+- runtime caching,
+- install prompt component,
+- offline banner component.
+
+---
+
+## Testing & code quality
+
+### Backend
+
+```bash
+cd backend
+npm test
+```
+
+### Frontend checks
+
+```bash
+cd frontend
+npm run check:ci
+npm run build
+```
+
+---
+
+## Deployment
+
+This repo includes multiple deployment paths:
+
+- Dockerfiles for frontend and backend
+- GHCR publishing workflow (`.github/workflows/docker-deploy.yml`)
+- Azure deployment guide
+- Docker deployment guide
+
+See docs:
+
+- [Azure deployment guide](./docs/AZURE_DEPLOYMENT_GUIDE.md)
+- [Docker deployment guide](./docs/DOCKER_DEPLOYMENT.md)
+- [Recurring transactions guide](./docs/RECURRING_TRANSACTIONS_GUIDE.md)
+
+---
+
+## Troubleshooting
+
+### 1) Backend starts but auth fails
+- Confirm `SESSION_SECRET`, Google OAuth env vars, and `FRONTEND_URL`.
+- Verify redirect URI in Google Console exactly matches backend callback URL.
+
+### 2) Session/cookie issues across domains
+- App supports `X-Session-Id` fallback header. Ensure frontend localStorage is not blocked.
+
+### 3) CORS errors
+- `FRONTEND_URL` in backend env must match frontend origin exactly.
+
+### 4) MongoDB connection error
+- Verify `MONGODB_URI` and network access (if using Atlas).
+
+---
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch
+3. Make changes with tests/checks
+4. Open a pull request
+
+---
+
+## License
+
+Current package manifests use **ISC** license.

@@ -8,6 +8,22 @@ const { protect } = require('../middleware/auth');
 // All routes are protected
 router.use(protect);
 
+const MONTHLY_ANCHORED_FREQUENCIES = ['monthly', 'quarterly', 'yearly'];
+const WEEKLY_ANCHORED_FREQUENCIES = ['weekly', 'biweekly'];
+
+const isMissing = (value) => value === undefined || value === null || value === '';
+const isValidDate = (date) => date instanceof Date && !Number.isNaN(date.getTime());
+
+const applyScheduleAnchors = (recurringData, startDate) => {
+  if (MONTHLY_ANCHORED_FREQUENCIES.includes(recurringData.frequency) && isMissing(recurringData.dayOfMonth)) {
+    recurringData.dayOfMonth = startDate.getDate();
+  }
+
+  if (WEEKLY_ANCHORED_FREQUENCIES.includes(recurringData.frequency) && isMissing(recurringData.dayOfWeek)) {
+    recurringData.dayOfWeek = startDate.getDay();
+  }
+};
+
 // GET /api/recurring - List all recurring transactions
 router.get('/', async (req, res) => {
   try {
@@ -151,7 +167,7 @@ router.post('/', async (req, res) => {
     };
     
     // Validate required fields
-    const requiredFields = ['type', 'category', 'amount', 'description', 'frequency', 'startDate'];
+    const requiredFields = ['type', 'category', 'amount', 'description', 'frequency', 'startDate', 'bankId'];
     const missingFields = requiredFields.filter(field => !recurringData[field]);
     
     if (missingFields.length > 0) {
@@ -160,11 +176,21 @@ router.post('/', async (req, res) => {
         message: `Missing required fields: ${missingFields.join(', ')}`
       });
     }
+
+    const startDate = new Date(recurringData.startDate);
+    if (!isValidDate(startDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid startDate'
+      });
+    }
+
+    recurringData.startDate = startDate;
+    applyScheduleAnchors(recurringData, startDate);
+    // First due should be the configured start date.
+    recurringData.nextDueDate = new Date(startDate);
     
     const recurring = new RecurringTransaction(recurringData);
-    
-    // Calculate next due date
-    recurring.nextDueDate = recurring.calculateNextDueDate();
     
     await recurring.save();
     await recurring.populate('bankId');
@@ -198,6 +224,14 @@ router.put('/:id', async (req, res) => {
         message: 'Recurring transaction not found'
       });
     }
+
+    const previousStartDate = recurring.startDate ? new Date(recurring.startDate) : null;
+    const previousStartTime = previousStartDate && isValidDate(previousStartDate)
+      ? previousStartDate.getTime()
+      : null;
+    const previousFrequency = recurring.frequency;
+    const previousDayOfMonth = recurring.dayOfMonth;
+    const previousDayOfWeek = recurring.dayOfWeek;
     
     // Update fields
     Object.keys(req.body).forEach(key => {
@@ -205,10 +239,30 @@ router.put('/:id', async (req, res) => {
         recurring[key] = req.body[key];
       }
     });
+
+    const startDate = recurring.startDate ? new Date(recurring.startDate) : null;
+    if (!startDate || !isValidDate(startDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid startDate'
+      });
+    }
+
+    applyScheduleAnchors(recurring, startDate);
+
+    const nextStartTime = startDate.getTime();
+    const startDateChanged = previousStartTime !== nextStartTime;
+    const frequencyChanged = previousFrequency !== recurring.frequency;
+    const dayOfMonthChanged = previousDayOfMonth !== recurring.dayOfMonth;
+    const dayOfWeekChanged = previousDayOfWeek !== recurring.dayOfWeek;
     
-    // Recalculate next due date if frequency or start date changed
-    if (req.body.frequency || req.body.startDate) {
-      recurring.nextDueDate = recurring.calculateNextDueDate();
+    // Keep first due aligned to startDate; don't skip an interval during setup edits.
+    if (startDateChanged || (recurring.generatedCount === 0 && (frequencyChanged || dayOfMonthChanged || dayOfWeekChanged))) {
+      recurring.nextDueDate = new Date(startDate);
+    }
+
+    if (!recurring.nextDueDate || new Date(recurring.nextDueDate) < startDate) {
+      recurring.nextDueDate = new Date(startDate);
     }
     
     await recurring.save();

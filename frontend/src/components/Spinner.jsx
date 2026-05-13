@@ -9,28 +9,26 @@ const Spinner = ({ size = 'md', fullScreen = false }) => {
   const spinner = (
     <div className="flex flex-col items-center justify-center gap-3">
       <div className="relative">
-        {/* Outer ring */}
+        {/* Outer ring-3 */}
         <div
-          className={`${sizeClasses[size]} animate-spin rounded-full border-gray-200 dark:border-gray-700 border-t-primary-600 dark:border-t-primary-400`}
+          className={`${sizeClasses[size]} animate-spin rounded-full border-border border-t-primary-600`}
         />
         {/* Inner pulse */}
         {(size === 'lg' || size === 'xl') && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-2 w-2 rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
           </div>
         )}
       </div>
       {fullScreen && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">
-          Loading...
-        </p>
+        <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
       )}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 animate-fade-in">
+      <div className="fixed inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm z-50 animate-fade-in">
         {spinner}
       </div>
     );

@@ -1,25 +1,25 @@
-import { useState, useEffect } from 'react';
-import { FiDownload, FiCalendar } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { FiCalendar, FiDownload } from 'react-icons/fi';
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  Legend,
 } from 'recharts';
-import { dashboardAPI, exportAPI } from '../services/api';
 import Spinner from '../components/Spinner';
-import toast from 'react-hot-toast';
-import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency';
 import { useAuth } from '../hooks/useAuth';
+import { dashboardAPI, exportAPI } from '../services/api';
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -89,8 +89,18 @@ const Reports = () => {
   const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
 
   const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
@@ -108,20 +118,18 @@ const Reports = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-            Reports
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Reports</h1>
+          <p className="text-muted-foreground mt-1">
             Detailed financial reports and analytics
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2">
-            <FiCalendar className="w-5 h-5 text-gray-400" />
+            <FiCalendar className="w-5 h-5 text-muted-foreground" />
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="input py-2"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring py-2"
             >
               {months.map((month, index) => (
                 <option key={month} value={index + 1}>
@@ -132,7 +140,7 @@ const Reports = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="input py-2"
+              className="w-full px-4 py-2.5 border border-input rounded-lg bg-card text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring py-2"
             >
               {years.map((year) => (
                 <option key={year} value={year}>
@@ -141,10 +149,7 @@ const Reports = () => {
               ))}
             </select>
           </div>
-          <button
-            onClick={handleExportPDF}
-            className="btn-primary flex items-center gap-2"
-          >
+          <button onClick={handleExportPDF} className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg font-medium flex items-center gap-2">
             <FiDownload className="w-4 h-4" />
             Export PDF
           </button>
@@ -153,25 +158,23 @@ const Reports = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Monthly Income</p>
-          <p className="text-2xl font-bold text-success-600 dark:text-success-400">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <p className="text-sm text-muted-foreground mb-1">Monthly Income</p>
+          <p className="text-2xl font-bold text-chart-2">
             {formatCurrency(summary?.monthly?.income || 0)}
           </p>
         </div>
-        <div className="card p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Monthly Expenses</p>
-          <p className="text-2xl font-bold text-danger-600 dark:text-danger-400">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <p className="text-sm text-muted-foreground mb-1">Monthly Expenses</p>
+          <p className="text-2xl font-bold text-destructive">
             {formatCurrency(summary?.monthly?.expense || 0)}
           </p>
         </div>
-        <div className="card p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Net Balance</p>
-          <p className={`text-2xl font-bold ${
-            (summary?.monthly?.balance || 0) >= 0 
-              ? 'text-primary-600 dark:text-primary-400'
-              : 'text-danger-600 dark:text-danger-400'
-          }`}>
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <p className="text-sm text-muted-foreground mb-1">Net Balance</p>
+          <p
+            className={`text-2xl font-bold ${ (summary?.monthly?.balance || 0) >= 0 ? 'text-primary ' : 'text-destructive ' }`}
+          >
             {formatCurrency(summary?.monthly?.balance || 0)}
           </p>
         </div>
@@ -180,8 +183,8 @@ const Reports = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly Trend */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             12-Month Trend
           </h3>
           <div className="h-72">
@@ -197,7 +200,10 @@ const Reports = () => {
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="stroke-border"
+                />
                 <XAxis dataKey="monthName" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v / 1000}k`} />
                 <Tooltip
@@ -209,16 +215,32 @@ const Reports = () => {
                   }}
                   formatter={(value) => formatCurrency(value)}
                 />
-                <Area type="monotone" dataKey="income" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Income" />
-                <Area type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Expense" />
+                <Area
+                  type="monotone"
+                  dataKey="income"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorIncome)"
+                  name="Income"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="expense"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorExpense)"
+                  name="Expense"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Category Breakdown */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             Expense by Category
           </h3>
           <div className="h-72">
@@ -252,7 +274,7 @@ const Reports = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
+              <div className="h-full flex items-center justify-center text-muted-foreground">
                 No expense data for this period
               </div>
             )}
@@ -260,35 +282,44 @@ const Reports = () => {
         </div>
 
         {/* Payment Method Breakdown */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             By Payment Method
           </h3>
           <div className="h-72">
             {paymentBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={paymentBreakdown} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                <XAxis dataKey="monthName" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${getCurrencySymbol(userCurrency)}${v / 1000}k`} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value) => formatCurrency(value)}
-                />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-border"
+                  />
+                  <XAxis dataKey="monthName" tick={{ fontSize: 12 }} />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(v) => `${getCurrencySymbol(userCurrency)}${v / 1000}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                    }}
+                    formatter={(value) => formatCurrency(value)}
+                  />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {paymentBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PAYMENT_COLORS[entry.paymentMethod] || '#6B7280'} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={PAYMENT_COLORS[entry.paymentMethod] || '#6B7280'}
+                      />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
+              <div className="h-full flex items-center justify-center text-muted-foreground">
                 No payment data for this period
               </div>
             )}
@@ -296,16 +327,22 @@ const Reports = () => {
         </div>
 
         {/* Monthly Comparison */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             Income vs Expense Comparison
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <BarChart data={monthlyTrend}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="stroke-border"
+                />
                 <XAxis dataKey="monthName" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${getCurrencySymbol(userCurrency)}${v / 1000}k`} />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(v) => `${getCurrencySymbol(userCurrency)}${v / 1000}k`}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -325,51 +362,59 @@ const Reports = () => {
       </div>
 
       {/* Category Details Table */}
-      <div className="card overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">
             Category-wise Summary for {months[selectedMonth - 1]} {selectedYear}
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-background">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transactions</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Category
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                  Amount
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                  Transactions
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                  % of Total
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-border">
               {categoryBreakdown.length > 0 ? (
                 categoryBreakdown.map((cat, index) => (
-                  <tr key={cat.category} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <tr key={cat.category} className="hover:bg-background">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
-                        <span className="font-medium text-gray-900 dark:text-white capitalize">
+                        <span className="font-medium text-foreground capitalize">
                           {cat.category}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-right font-medium text-foreground">
                       {formatCurrency(cat.total)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-right text-muted-foreground">
                       {cat.count}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-right text-muted-foreground">
                       {cat.percentage}%
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="4" className="px-4 py-8 text-center text-muted-foreground">
                     No expense data for this period
                   </td>
                 </tr>

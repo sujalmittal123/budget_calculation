@@ -3,10 +3,10 @@ import { persist } from 'zustand/middleware';
 
 /**
  * Zustand Authentication Store
- * 
+ *
  * Global state management for user authentication.
  * Replaces the old AuthContext with better performance.
- * 
+ *
  * Features:
  * - Centralized auth state
  * - Automatic persistence (user data only)

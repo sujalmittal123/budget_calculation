@@ -1,41 +1,41 @@
-import { useState, useEffect } from 'react';
-import { format, subDays, addDays } from 'date-fns';
+import { addDays, format, subDays } from 'date-fns';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import {
+  FiAlertCircle,
   FiCalendar,
   FiChevronLeft,
   FiChevronRight,
-  FiEdit3,
-  FiSave,
-  FiTrendingDown,
   FiDollarSign,
-  FiAlertCircle,
-  FiSmile,
-  FiMeh,
+  FiEdit3,
   FiFrown,
+  FiMeh,
+  FiSave,
+  FiSmile,
+  FiTrendingDown,
 } from 'react-icons/fi';
-import { dailyNotesAPI, transactionsAPI } from '../services/api';
-import { useAuth } from '../hooks/useAuth';
-import Spinner from '../components/Spinner';
-import toast from 'react-hot-toast';
-import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency';
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts';
+import Spinner from '../components/Spinner';
+import { useAuth } from '../hooks/useAuth';
+import { dailyNotesAPI, transactionsAPI } from '../services/api';
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from '../utils/currency';
 
 const MOODS = [
-  { value: 'great', label: 'Great', emoji: '😄', color: 'text-green-500' },
-  { value: 'good', label: 'Good', emoji: '🙂', color: 'text-blue-500' },
-  { value: 'okay', label: 'Okay', emoji: '😐', color: 'text-yellow-500' },
-  { value: 'bad', label: 'Bad', emoji: '😕', color: 'text-orange-500' },
-  { value: 'terrible', label: 'Terrible', emoji: '😢', color: 'text-red-500' },
+  { value: 'great', label: 'Great', emoji: '😄', color: 'text-chart-2' },
+  { value: 'good', label: 'Good', emoji: '🙂', color: 'text-chart-1' },
+  { value: 'okay', label: 'Okay', emoji: '😐', color: 'text-chart-4' },
+  { value: 'bad', label: 'Bad', emoji: '😕', color: 'text-chart-5' },
+  { value: 'terrible', label: 'Terrible', emoji: '😢', color: 'text-destructive' },
 ];
 
 const DailyNotes = () => {
@@ -73,7 +73,7 @@ const DailyNotes = () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const response = await dailyNotesAPI.getByDate(dateStr);
       setDailyData(response.data.data);
-      
+
       if (response.data.data.note) {
         setNote({
           notes: response.data.data.note.notes || '',
@@ -101,8 +101,7 @@ const DailyNotes = () => {
     try {
       const response = await dailyNotesAPI.getBurnRate();
       setBurnRate(response.data.data);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleSaveNote = async () => {
@@ -127,7 +126,7 @@ const DailyNotes = () => {
 
   const addHighlight = () => {
     if (newHighlight.trim()) {
-      setNote(prev => ({
+      setNote((prev) => ({
         ...prev,
         highlights: [...prev.highlights, newHighlight.trim()],
       }));
@@ -136,7 +135,7 @@ const DailyNotes = () => {
   };
 
   const removeHighlight = (index) => {
-    setNote(prev => ({
+    setNote((prev) => ({
       ...prev,
       highlights: prev.highlights.filter((_, i) => i !== index),
     }));
@@ -155,10 +154,10 @@ const DailyNotes = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Daily Notes & Expenses 📝
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-muted-foreground mt-1">
             Track your daily expenses and personal notes
           </p>
         </div>
@@ -168,77 +167,75 @@ const DailyNotes = () => {
       {burnRate && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Average Daily Burn */}
-          <div className="card p-6 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-orange-200 dark:border-orange-800">
+          <div className="bg-card rounded-xl shadow-sm border border-border p-6 bg-gradient-to-br from-chart-5/10 to-destructive/10 border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                <p className="text-sm font-medium text-chart-5">
                   Daily Burn Rate
                 </p>
-                <p className="text-2xl font-bold text-orange-700 dark:text-orange-300 mt-1">
+                <p className="text-2xl font-bold text-chart-5 mt-1">
                   {formatCurrency(burnRate.averageDailyBurn)}
                 </p>
-                <p className="text-xs text-orange-500 mt-1">per day average</p>
+                <p className="text-xs text-chart-5 mt-1">per day average</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-xl flex items-center justify-center">
-                <FiTrendingDown className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <div className="w-12 h-12 bg-chart-5/10 rounded-xl flex items-center justify-center">
+                <FiTrendingDown className="w-6 h-6 text-chart-5" />
               </div>
             </div>
           </div>
 
           {/* Projected Monthly */}
-          <div className="card p-6 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-800">
+          <div className="bg-card rounded-xl shadow-sm border border-border p-6 bg-gradient-to-br from-chart-3/10 to-primary/10 border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                <p className="text-sm font-medium text-chart-3">
                   Projected Monthly
                 </p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mt-1">
+                <p className="text-2xl font-bold text-chart-3 mt-1">
                   {formatCurrency(burnRate.projectedMonthlyExpense)}
                 </p>
-                <p className="text-xs text-purple-500 mt-1">
+                <p className="text-xs text-chart-3 mt-1">
                   {burnRate.remainingDays} days remaining
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <FiDollarSign className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="w-12 h-12 bg-chart-3/10 rounded-xl flex items-center justify-center">
+                <FiDollarSign className="w-6 h-6 text-chart-3" />
               </div>
             </div>
           </div>
 
           {/* Highest Spending Day */}
-          <div className="card p-6 bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-200 dark:border-red-800">
+          <div className="bg-card rounded-xl shadow-sm border border-border p-6 bg-gradient-to-br from-destructive/10 to-chart-5/10 border-destructive/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                <p className="text-sm font-medium text-destructive">
                   Highest Spend Day
                 </p>
-                <p className="text-2xl font-bold text-red-700 dark:text-red-300 mt-1">
+                <p className="text-2xl font-bold text-destructive mt-1">
                   {formatCurrency(burnRate.highestSpendingDay?.amount)}
                 </p>
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-destructive mt-1">
                   {burnRate.highestSpendingDay?.date || 'N/A'}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 rounded-xl flex items-center justify-center">
-                <FiAlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div className="w-12 h-12 bg-destructive/10 rounded-xl flex items-center justify-center">
+                <FiAlertCircle className="w-6 h-6 text-destructive" />
               </div>
             </div>
           </div>
 
           {/* Days with Expenses */}
-          <div className="card p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800">
+          <div className="bg-card rounded-xl shadow-sm border border-border p-6 bg-gradient-to-br from-chart-1/10 to-chart-1/10 border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                  Active Days
-                </p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">
+                <p className="text-sm font-medium text-chart-1">Active Days</p>
+                <p className="text-2xl font-bold text-chart-1 mt-1">
                   {burnRate.daysWithExpense} / {burnRate.daysElapsed}
                 </p>
-                <p className="text-xs text-blue-500 mt-1">days with expenses</p>
+                <p className="text-xs text-chart-1 mt-1">days with expenses</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <FiCalendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 bg-chart-1/10 rounded-xl flex items-center justify-center">
+                <FiCalendar className="w-6 h-6 text-chart-1" />
               </div>
             </div>
           </div>
@@ -247,28 +244,28 @@ const DailyNotes = () => {
 
       {/* Daily Burn Chart */}
       {burnRate?.dailyBreakdown?.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             📊 Daily Expense Trend (This Month)
           </h3>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={burnRate.dailyBreakdown}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="_id" 
+              <XAxis
+                dataKey="_id"
                 tick={{ fontSize: 12 }}
                 tickFormatter={(value) => format(new Date(value), 'dd')}
               />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [formatCurrency(value), 'Expense']}
                 labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
               />
-              <Area 
-                type="monotone" 
-                dataKey="dailyTotal" 
-                stroke="#EF4444" 
-                fill="#FEE2E2" 
+              <Area
+                type="monotone"
+                dataKey="dailyTotal"
+                stroke="#EF4444"
+                fill="#FEE2E2"
                 strokeWidth={2}
               />
             </AreaChart>
@@ -279,20 +276,20 @@ const DailyNotes = () => {
       {/* Date Navigator & Daily Notes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Date Navigator */}
-        <div className="card p-6">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={handlePrevDay}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg hover:bg-background transition-colors"
             >
               <FiChevronLeft className="w-5 h-5" />
             </button>
-            
+
             <div className="text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 {isToday ? 'Today' : format(selectedDate, 'EEEE')}
               </p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">
+              <p className="text-xl font-bold text-foreground">
                 {format(selectedDate, 'MMMM dd, yyyy')}
               </p>
             </div>
@@ -300,11 +297,7 @@ const DailyNotes = () => {
             <button
               onClick={handleNextDay}
               disabled={isToday}
-              className={`p-2 rounded-lg transition-colors ${
-                isToday 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
+              className={`p-2 rounded-lg transition-colors ${ isToday ? 'opacity-50 cursor-not-allowed' : 'hover:bg-background ' }`}
             >
               <FiChevronRight className="w-5 h-5" />
             </button>
@@ -312,25 +305,23 @@ const DailyNotes = () => {
 
           {/* Daily Summary */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <p className="text-xs text-green-600 dark:text-green-400">Income</p>
-              <p className="text-lg font-bold text-green-700 dark:text-green-300">
+            <div className="text-center p-3 bg-chart-2/10 rounded-lg">
+              <p className="text-xs text-chart-2">Income</p>
+              <p className="text-lg font-bold text-chart-2">
                 {formatCurrency(dailyData?.totals?.income)}
               </p>
             </div>
-            <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <p className="text-xs text-red-600 dark:text-red-400">Expense</p>
-              <p className="text-lg font-bold text-red-700 dark:text-red-300">
+            <div className="text-center p-3 bg-destructive/10 rounded-lg">
+              <p className="text-xs text-destructive">Expense</p>
+              <p className="text-lg font-bold text-destructive">
                 {formatCurrency(dailyData?.totals?.expense)}
               </p>
             </div>
-            <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-xs text-blue-600 dark:text-blue-400">Balance</p>
-              <p className={`text-lg font-bold ${
-                (dailyData?.totals?.balance || 0) >= 0 
-                  ? 'text-blue-700 dark:text-blue-300' 
-                  : 'text-red-700 dark:text-red-300'
-              }`}>
+            <div className="text-center p-3 bg-chart-1/10 rounded-lg">
+              <p className="text-xs text-chart-1">Balance</p>
+              <p
+                className={`text-lg font-bold ${ (dailyData?.totals?.balance || 0) >= 0 ? 'text-chart-1 ' : 'text-destructive ' }`}
+              >
                 {formatCurrency(dailyData?.totals?.balance)}
               </p>
             </div>
@@ -338,7 +329,7 @@ const DailyNotes = () => {
 
           {/* Transactions List */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            <h4 className="text-sm font-semibold text-foreground mb-3">
               Transactions ({dailyData?.transactions?.length || 0})
             </h4>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -346,30 +337,31 @@ const DailyNotes = () => {
                 dailyData.transactions.map((tx) => (
                   <div
                     key={tx._id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-background rounded-lg"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        tx.type === 'income' ? 'bg-green-500' : 'bg-red-500'
-                      }`} />
+                      <div
+                        className={`w-2 h-2 rounded-full ${ tx.type === 'income' ? 'bg-chart-2' : 'bg-destructive' }`}
+                      />
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white text-sm">
+                        <p className="font-medium text-foreground text-sm">
                           {tx.description || tx.category}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                        <p className="text-xs text-muted-foreground capitalize">
                           {tx.category} • {tx.paymentMethod?.replace('_', ' ')}
                         </p>
                       </div>
                     </div>
-                    <span className={`font-semibold ${
-                      tx.type === 'income' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    <span
+                      className={`font-semibold ${ tx.type === 'income' ? 'text-chart-2' : 'text-destructive' }`}
+                    >
+                      {tx.type === 'income' ? '+' : '-'}
+                      {formatCurrency(tx.amount)}
                     </span>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                <p className="text-center text-muted-foreground py-4">
                   No transactions for this day
                 </p>
               )}
@@ -378,19 +370,15 @@ const DailyNotes = () => {
         </div>
 
         {/* Daily Notes Editor */}
-        <div className="card p-6">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-foreground">
               📝 Personal Notes
             </h3>
             <button
-              onClick={() => isEditing ? handleSaveNote() : setIsEditing(true)}
+              onClick={() => (isEditing ? handleSaveNote() : setIsEditing(true))}
               disabled={saving}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                isEditing
-                  ? 'bg-primary-600 text-white hover:bg-primary-700'
-                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${ isEditing ? 'bg-primary text-white hover:bg-primary' : 'bg-background hover:bg-muted ' }`}
             >
               {saving ? (
                 <Spinner size="sm" />
@@ -410,20 +398,16 @@ const DailyNotes = () => {
 
           {/* Mood Selector */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               How was your day?
             </label>
             <div className="flex gap-2">
               {MOODS.map((mood) => (
                 <button
                   key={mood.value}
-                  onClick={() => isEditing && setNote(prev => ({ ...prev, mood: mood.value }))}
+                  onClick={() => isEditing && setNote((prev) => ({ ...prev, mood: mood.value }))}
                   disabled={!isEditing}
-                  className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all ${
-                    note.mood === mood.value
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
-                  } ${!isEditing && 'cursor-default'}`}
+                  className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all ${ note.mood === mood.value ? 'border-primary bg-primary/10 ' : 'border-border hover:border-border' } ${!isEditing && 'cursor-default'}`}
                 >
                   <span className="text-xl">{mood.emoji}</span>
                 </button>
@@ -433,49 +417,51 @@ const DailyNotes = () => {
 
           {/* Notes Textarea */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Notes
             </label>
             <textarea
               value={note.notes}
-              onChange={(e) => setNote(prev => ({ ...prev, notes: e.target.value }))}
+              onChange={(e) => setNote((prev) => ({ ...prev, notes: e.target.value }))}
               disabled={!isEditing}
               rows={4}
               placeholder="Write about your day, expenses, thoughts..."
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed resize-none"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-card text-foreground focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed resize-none"
             />
           </div>
 
           {/* Daily Budget */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Daily Budget Target ({currencySymbol})
             </label>
             <input
               type="number"
               value={note.dailyBudget}
-              onChange={(e) => setNote(prev => ({ ...prev, dailyBudget: parseFloat(e.target.value) || 0 }))}
+              onChange={(e) =>
+                setNote((prev) => ({ ...prev, dailyBudget: parseFloat(e.target.value) || 0 }))
+              }
               disabled={!isEditing}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 rounded-lg border border-border bg-card text-foreground focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 
           {/* Highlights */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Day Highlights
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
               {note.highlights.map((highlight, index) => (
                 <span
                   key={index}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm"
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
                 >
                   {highlight}
                   {isEditing && (
                     <button
                       onClick={() => removeHighlight(index)}
-                      className="ml-1 hover:text-primary-900"
+                      className="ml-1 hover:text-primary"
                     >
                       ×
                     </button>
@@ -491,11 +477,11 @@ const DailyNotes = () => {
                   onChange={(e) => setNewHighlight(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addHighlight()}
                   placeholder="Add a highlight..."
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-border bg-card text-foreground"
                 />
                 <button
                   onClick={addHighlight}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary text-sm"
                 >
                   Add
                 </button>
@@ -507,8 +493,8 @@ const DailyNotes = () => {
 
       {/* Weekly Burn Rate */}
       {burnRate?.weeklyBurn?.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             📈 Weekly Burn Rate Comparison
           </h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -516,7 +502,7 @@ const DailyNotes = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="week" tickFormatter={(week) => `Week ${week}`} />
               <YAxis />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [formatCurrency(value), 'Total']}
                 labelFormatter={(week) => `Week ${week}`}
               />

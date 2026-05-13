@@ -80,9 +80,10 @@ export const transactionsAPI = {
   update: (id, data) => api.put(`/transactions/${id}`, data),
   delete: (id) => api.delete(`/transactions/${id}`),
   bulkDelete: (ids) => api.delete('/transactions/bulk', { data: { ids } }),
-  importCSV: (formData) => api.post('/transactions/import-csv', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  importCSV: (formData) =>
+    api.post('/transactions/import-csv', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
 
 // Dashboard API
@@ -91,7 +92,8 @@ export const dashboardAPI = {
   getCategoryBreakdown: (params) => api.get('/dashboard/category-breakdown', { params }),
   getMonthlyTrend: () => api.get('/dashboard/monthly-trend'),
   getBankSummary: () => api.get('/dashboard/bank-summary'),
-  getRecentTransactions: (limit) => api.get('/dashboard/recent-transactions', { params: { limit } }),
+  getRecentTransactions: (limit) =>
+    api.get('/dashboard/recent-transactions', { params: { limit } }),
   getPaymentMethodBreakdown: (params) => api.get('/dashboard/payment-method-breakdown', { params }),
 };
 
@@ -106,14 +108,16 @@ export const dailyNotesAPI = {
 
 // Export API
 export const exportAPI = {
-  transactionsCSV: (params) => api.get('/export/transactions/csv', { 
-    params,
-    responseType: 'blob' 
-  }),
-  reportPDF: (params) => api.get('/export/report/pdf', { 
-    params,
-    responseType: 'blob' 
-  }),
+  transactionsCSV: (params) =>
+    api.get('/export/transactions/csv', {
+      params,
+      responseType: 'blob',
+    }),
+  reportPDF: (params) =>
+    api.get('/export/report/pdf', {
+      params,
+      responseType: 'blob',
+    }),
 };
 
 // Recurring Transactions API
@@ -126,16 +130,16 @@ export const recurringAPI = {
   delete: (id) => api.delete(`/recurring/${id}`),
   pause: (id) => api.patch(`/recurring/${id}/pause`),
   resume: (id) => api.patch(`/recurring/${id}/resume`),
-  
+
   // AI Detection
   detect: () => api.get('/recurring/detect'),
   approvePattern: (pattern) => api.post('/recurring/detect/approve', { pattern }),
-  
+
   // Generation
   getUpcoming: (days = 30) => api.get('/recurring/upcoming', { params: { days } }),
   generateNow: (id) => api.post(`/recurring/${id}/generate`),
   getHistory: (id) => api.get(`/recurring/${id}/history`),
-  
+
   // Batch operations
   batchApprove: (patterns) => api.post('/recurring/batch/approve', { patterns }),
   batchDelete: (ids) => api.delete('/recurring/batch/delete', { data: { ids } }),

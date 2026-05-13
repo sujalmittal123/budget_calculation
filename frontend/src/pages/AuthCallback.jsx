@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import { authService } from '../services/auth';
-import { markAuthInitialized } from '../hooks/useAuth';
 import Spinner from '../components/Spinner';
+import { markAuthInitialized } from '../hooks/useAuth';
+import { authService } from '../services/auth';
+import { useAuthStore } from '../stores/authStore';
 
 /**
  * OAuth Callback Handler
- * 
+ *
  * This page handles the redirect after Google OAuth login.
  * It stores the session ID, fetches the session directly (bypassing useAuth
  * to avoid race conditions with initAuth), then navigates to the dashboard.
@@ -39,14 +39,14 @@ const AuthCallback = () => {
           console.log('Storing session ID from URL:', sessionId);
           localStorage.setItem('sessionId', sessionId);
         }
-        
+
         // Small delay to ensure backend session is fully saved
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         try {
           // Fetch session directly — bypasses useAuth's initAuth to avoid race condition
           const sessionData = await authService.getSession();
-          
+
           if (sessionData && sessionData.user) {
             // Write directly to Zustand store and mark auth as initialized
             // so useAuth's initAuth doesn't re-run on the next page
@@ -72,12 +72,8 @@ const AuthCallback = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700">
       <div className="text-center">
         <Spinner size="lg" />
-        <p className="mt-4 text-white text-lg font-medium">
-          Completing sign in...
-        </p>
-        <p className="mt-2 text-primary-100 text-sm">
-          Please wait while we set up your session
-        </p>
+        <p className="mt-4 text-white text-lg font-medium">Completing sign in...</p>
+        <p className="mt-2 text-primary/70 text-sm">Please wait while we set up your session</p>
       </div>
     </div>
   );

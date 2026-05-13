@@ -25,14 +25,14 @@ export const signInWithGoogle = () => {
 export const getSession = async () => {
   // Get session ID from localStorage (fallback for cross-domain cookie issues)
   const sessionId = localStorage.getItem('sessionId');
-  
+
   const headers = {};
-  
+
   // Add custom session ID header if available
   if (sessionId) {
     headers['X-Session-Id'] = sessionId;
   }
-  
+
   const response = await fetch('/api/auth/session', {
     method: 'GET',
     headers,

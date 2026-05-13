@@ -4,29 +4,29 @@
  */
 
 export const CURRENCIES = {
-  USD: { 
-    symbol: '$', 
+  USD: {
+    symbol: '$',
     locale: 'en-US',
     name: 'US Dollar',
-    code: 'USD'
+    code: 'USD',
   },
-  INR: { 
-    symbol: '₹', 
+  INR: {
+    symbol: '₹',
     locale: 'en-IN',
     name: 'Indian Rupee',
-    code: 'INR'
+    code: 'INR',
   },
-  EUR: { 
-    symbol: '€', 
+  EUR: {
+    symbol: '€',
     locale: 'de-DE',
     name: 'Euro',
-    code: 'EUR'
+    code: 'EUR',
   },
-  GBP: { 
-    symbol: '£', 
+  GBP: {
+    symbol: '£',
     locale: 'en-GB',
     name: 'British Pound',
-    code: 'GBP'
+    code: 'GBP',
   },
 };
 
@@ -38,7 +38,7 @@ export const CURRENCIES = {
  */
 export const formatCurrency = (value, currencyCode = 'USD') => {
   const config = CURRENCIES[currencyCode] || CURRENCIES.USD;
-  
+
   return new Intl.NumberFormat(config.locale, {
     style: 'currency',
     currency: config.code,

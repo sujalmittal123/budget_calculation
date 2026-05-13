@@ -1,15 +1,35 @@
-import { useState, useEffect } from 'react';
-import { 
-  FiRepeat, FiPlus, FiPause, FiPlay, FiTrash2, FiEdit2, 
-  FiZap, FiCalendar, FiCheck, FiX, FiTrendingUp, FiClock,
-  FiDollarSign, FiAlertCircle
-} from 'react-icons/fi';
+import {
+  addDays,
+  addMonths,
+  addWeeks,
+  addYears,
+  format,
+  isAfter,
+  isBefore,
+  parseISO,
+} from 'date-fns';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { recurringAPI } from '../services/api';
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants/categories';
-import { format, parseISO, addDays, addWeeks, addMonths, addYears, isAfter, isBefore } from 'date-fns';
-import { formatCurrency as formatCurrencyUtil } from '../utils/currency';
+import {
+  FiAlertCircle,
+  FiCalendar,
+  FiCheck,
+  FiClock,
+  FiDollarSign,
+  FiEdit2,
+  FiPause,
+  FiPlay,
+  FiPlus,
+  FiRepeat,
+  FiTrash2,
+  FiTrendingUp,
+  FiX,
+  FiZap,
+} from 'react-icons/fi';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
 import { useAuth } from '../hooks/useAuth';
+import { bankAccountsAPI, recurringAPI } from '../services/api';
+import { formatCurrency as formatCurrencyUtil } from '../utils/currency';
 
 const RecurringTransactions = () => {
   const { user } = useAuth();
@@ -32,9 +52,9 @@ const RecurringTransactions = () => {
     setLoading(true);
     try {
       const [recurringRes, patternsRes, upcomingRes] = await Promise.all([
-        recurringAPI.getAll({ status: 'active' }),
+        recurringAPI.getAll(),
         recurringAPI.detect(),
-        recurringAPI.getUpcoming(30)
+        recurringAPI.getUpcoming(30),
       ]);
 
       setRecurring(recurringRes.data.data || []);
@@ -69,7 +89,7 @@ const RecurringTransactions = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this recurring transaction?')) return;
-    
+
     try {
       await recurringAPI.delete(id);
       toast.success('Recurring transaction deleted');
@@ -101,7 +121,7 @@ const RecurringTransactions = () => {
 
   const handleBatchApprove = async () => {
     if (detectedPatterns.length === 0) return;
-    
+
     try {
       await recurringAPI.batchApprove(detectedPatterns);
       toast.success(`Approved ${detectedPatterns.length} pattern(s)`);
@@ -118,21 +138,21 @@ const RecurringTransactions = () => {
       biweekly: 'Bi-weekly',
       monthly: 'Monthly',
       quarterly: 'Quarterly',
-      yearly: 'Yearly'
+      yearly: 'Yearly',
     };
     return labels[frequency] || frequency;
   };
 
   const getConfidenceColor = (score) => {
-    if (score >= 80) return 'text-emerald-600 bg-emerald-50';
-    if (score >= 60) return 'text-amber-600 bg-amber-50';
-    return 'text-rose-600 bg-rose-50';
+    if (score >= 80) return 'text-chart-2 bg-chart-2/10';
+    if (score >= 60) return 'text-chart-4 bg-chart-4/10';
+    return 'text-destructive bg-destructive/10';
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -142,20 +162,21 @@ const RecurringTransactions = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <FiRepeat className="text-primary-600" />
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+            <FiRepeat className="text-primary" />
             Recurring Transactions
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-muted-foreground mt-2">
             Manage your recurring income and expenses with AI-powered detection
           </p>
         </div>
         <button
+          type="button"
           onClick={() => {
             setEditingItem(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-primary text-white rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-chart-3 text-white rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105"
         >
           <FiPlus className="w-5 h-5" />
           <span>Add Recurring</span>
@@ -166,32 +187,32 @@ const RecurringTransactions = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard
           title="Active"
-          value={recurring.filter(r => r.status === 'active').length}
+          value={recurring.filter((r) => r.status === 'active').length}
           icon={FiRepeat}
-          gradient="from-emerald-500 to-teal-500"
+          gradient="from-chart-2 to-chart-1"
         />
         <StatCard
           title="Paused"
-          value={recurring.filter(r => r.status === 'paused').length}
+          value={recurring.filter((r) => r.status === 'paused').length}
           icon={FiPause}
-          gradient="from-amber-500 to-orange-500"
+          gradient="from-chart-4 to-chart-5"
         />
         <StatCard
           title="Detected Patterns"
           value={detectedPatterns.length}
           icon={FiZap}
-          gradient="from-purple-500 to-pink-500"
+          gradient="from-chart-3 to-chart-5"
         />
         <StatCard
           title="Upcoming (30 days)"
           value={upcomingTransactions.length}
           icon={FiCalendar}
-          gradient="from-blue-500 to-indigo-500"
+          gradient="from-chart-1 to-primary/100"
         />
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex gap-2 border-b border-border">
         <TabButton
           active={activeTab === 'active'}
           onClick={() => setActiveTab('active')}
@@ -269,8 +290,10 @@ const RecurringTransactions = () => {
 
 // Stat Card Component
 const StatCard = ({ title, value, icon: Icon, gradient }) => (
-  <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${gradient} p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
-    <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12"></div>
+  <div
+    className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${gradient} p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}
+  >
+    <div className="absolute top-0 right-0 w-24 h-24 bg-card/10 rounded-full -mr-12 -mt-12"></div>
     <div className="relative z-10">
       <div className="flex items-center justify-between mb-2">
         <p className="text-white/80 text-sm font-medium">{title}</p>
@@ -284,22 +307,27 @@ const StatCard = ({ title, value, icon: Icon, gradient }) => (
 // Tab Button Component
 const TabButton = ({ active, onClick, label, count, badge }) => (
   <button
+    type="button"
     onClick={onClick}
-    className={`relative px-4 py-3 font-medium transition-all duration-300 ${
-      active
-        ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600'
-        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-    }`}
+    className={`relative px-4 py-3 font-medium transition-all duration-300 ${ active ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground ' }`}
   >
     {label} <span className="text-sm">({count})</span>
     {badge && (
-      <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+      <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-pulse"></span>
     )}
   </button>
 );
 
 // Active Recurring Component
-const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerateNow, getFrequencyLabel }) => {
+const ActiveRecurring = ({
+  items,
+  onPause,
+  onResume,
+  onDelete,
+  onEdit,
+  onGenerateNow,
+  getFrequencyLabel,
+}) => {
   const { user } = useAuth();
   const userCurrency = user?.preferences?.currency || 'USD';
   const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
@@ -307,9 +335,9 @@ const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerat
   if (items.length === 0) {
     return (
       <div className="text-center py-12">
-        <FiRepeat className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400 text-lg">No active recurring transactions</p>
-        <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
+        <FiRepeat className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg">No active recurring transactions</p>
+        <p className="text-muted-foreground text-sm mt-2">
           Click "Add Recurring" to create one or check detected patterns
         </p>
       </div>
@@ -321,19 +349,21 @@ const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerat
       {items.map((item) => (
         <div
           key={item._id}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700"
+          className="bg-card rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-border"
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <span className={`text-2xl ${item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                <span
+                  className={`text-2xl ${item.type === 'income' ? 'text-chart-2' : 'text-destructive'}`}
+                >
                   {item.type === 'income' ? '↑' : '↓'}
                 </span>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-foreground">
                     {item.description}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     {item.category} {item.subcategory && `• ${item.subcategory}`}
                   </p>
                 </div>
@@ -341,38 +371,36 @@ const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerat
 
               <div className="flex flex-wrap items-center gap-4 mt-4">
                 <div className="flex items-center gap-2">
-                  <FiDollarSign className="w-4 h-4 text-gray-500" />
-                  <span className="font-semibold text-gray-900 dark:text-white">
+                  <FiDollarSign className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold text-foreground">
                     {formatCurrency(item.amount)}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <FiRepeat className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <FiRepeat className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
                     {getFrequencyLabel(item.frequency)}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <FiCalendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <FiCalendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
                     Next: {format(parseISO(item.nextDueDate), 'MMM dd, yyyy')}
                   </span>
                 </div>
 
                 {item.isAutoDetected && (
-                  <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded-full flex items-center gap-1">
+                  <span className="px-2 py-1 bg-chart-3/10 text-chart-3 text-xs rounded-full flex items-center gap-1">
                     <FiZap className="w-3 h-3" />
                     AI Detected
                   </span>
                 )}
 
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  item.status === 'active' 
-                    ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
-                }`}>
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${ item.status === 'active' ? 'bg-chart-2/10 text-chart-2 ' : 'bg-chart-4/10 text-chart-4 ' }`}
+                >
                   {item.status}
                 </span>
               </div>
@@ -381,16 +409,18 @@ const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerat
             <div className="flex items-center gap-2 ml-4">
               {item.status === 'active' ? (
                 <button
+                  type="button"
                   onClick={() => onPause(item._id)}
-                  className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                  className="p-2 text-chart-4 hover:bg-chart-4/10 rounded-lg transition-colors"
                   title="Pause"
                 >
                   <FiPause className="w-5 h-5" />
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => onResume(item._id)}
-                  className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                  className="p-2 text-chart-2 hover:bg-chart-2/10 rounded-lg transition-colors"
                   title="Resume"
                 >
                   <FiPlay className="w-5 h-5" />
@@ -398,24 +428,27 @@ const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerat
               )}
 
               <button
+                type="button"
                 onClick={() => onGenerateNow(item._id)}
-                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                className="p-2 text-chart-1 hover:bg-chart-1/10 rounded-lg transition-colors"
                 title="Generate Now"
               >
                 <FiZap className="w-5 h-5" />
               </button>
 
               <button
+                type="button"
                 onClick={() => onEdit(item)}
-                className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 text-muted-foreground hover:bg-background rounded-lg transition-colors"
                 title="Edit"
               >
                 <FiEdit2 className="w-5 h-5" />
               </button>
 
               <button
+                type="button"
                 onClick={() => onDelete(item._id)}
-                className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                 title="Delete"
               >
                 <FiTrash2 className="w-5 h-5" />
@@ -429,7 +462,13 @@ const ActiveRecurring = ({ items, onPause, onResume, onDelete, onEdit, onGenerat
 };
 
 // Detected Patterns Component
-const DetectedPatterns = ({ patterns, onApprove, onApproveAll, getFrequencyLabel, getConfidenceColor }) => {
+const DetectedPatterns = ({
+  patterns,
+  onApprove,
+  onApproveAll,
+  getFrequencyLabel,
+  getConfidenceColor,
+}) => {
   const { user } = useAuth();
   const userCurrency = user?.preferences?.currency || 'USD';
   const formatCurrency = (value) => formatCurrencyUtil(value, userCurrency);
@@ -437,9 +476,9 @@ const DetectedPatterns = ({ patterns, onApprove, onApproveAll, getFrequencyLabel
   if (patterns.length === 0) {
     return (
       <div className="text-center py-12">
-        <FiZap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400 text-lg">No patterns detected</p>
-        <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
+        <FiZap className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg">No patterns detected</p>
+        <p className="text-muted-foreground text-sm mt-2">
           Add more transactions to enable AI pattern detection
         </p>
       </div>
@@ -449,13 +488,14 @@ const DetectedPatterns = ({ patterns, onApprove, onApproveAll, getFrequencyLabel
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           AI detected {patterns.length} potential recurring transaction(s)
         </p>
         {patterns.length > 0 && (
           <button
+            type="button"
             onClick={onApproveAll}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-chart-2 text-white rounded-lg hover:bg-chart-2/90 transition-colors flex items-center gap-2"
           >
             <FiCheck className="w-4 h-4" />
             Approve All
@@ -464,53 +504,54 @@ const DetectedPatterns = ({ patterns, onApprove, onApproveAll, getFrequencyLabel
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {patterns.map((pattern, index) => (
+        {patterns.map((pattern) => (
           <div
-            key={index}
-            className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-6 shadow-md border-2 border-purple-200 dark:border-purple-800"
+            key={pattern._id || `${pattern.description}-${pattern.amount}-${pattern.frequency}-${pattern.nextDueDate || ''}`}
+            className="bg-gradient-to-br from-chart-3/10 to-chart-5/10 rounded-xl p-6 shadow-md border-2 border-border"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <FiZap className="w-6 h-6 text-purple-600" />
+                  <FiZap className="w-6 h-6 text-chart-3" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {pattern.description}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {pattern.category}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{pattern.category}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900 dark:text-white">
+                    <span className="font-semibold text-foreground">
                       {formatCurrency(pattern.amount)}
                     </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-sm text-muted-foreground">
                       • {getFrequencyLabel(pattern.frequency)}
                     </span>
                   </div>
 
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getConfidenceColor(pattern.confidenceScore)}`}>
-                    {pattern.confidenceScore}% Confidence
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getConfidenceColor(pattern.confidenceScore ?? pattern.confidence ?? 0)}`}
+                  >
+                    {pattern.confidenceScore ?? pattern.confidence ?? 0}% Confidence
                   </span>
 
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     Based on {pattern.occurrences} transaction(s)
                   </span>
                 </div>
 
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-muted-foreground">
                   Detection: {pattern.detectionSource.replace('_', ' ')}
                 </div>
               </div>
 
               <div className="flex items-center gap-2 ml-4">
                 <button
+                  type="button"
                   onClick={() => onApprove(pattern)}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-chart-2 text-white rounded-lg hover:bg-chart-2/90 transition-colors flex items-center gap-2"
                 >
                   <FiCheck className="w-4 h-4" />
                   Approve
@@ -533,8 +574,8 @@ const UpcomingTransactions = ({ items, getFrequencyLabel }) => {
   if (items.length === 0) {
     return (
       <div className="text-center py-12">
-        <FiCalendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400 text-lg">No upcoming transactions</p>
+        <FiCalendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground text-lg">No upcoming transactions</p>
       </div>
     );
   }
@@ -544,30 +585,28 @@ const UpcomingTransactions = ({ items, getFrequencyLabel }) => {
       {items.map((item) => (
         <div
           key={item._id}
-          className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+          className="flex items-center justify-between p-4 bg-card rounded-lg shadow-sm border border-border"
         >
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              item.type === 'income' 
-                ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600' 
-                : 'bg-rose-100 dark:bg-rose-900 text-rose-600'
-            }`}>
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center ${ item.type === 'income' ? 'bg-chart-2/10 text-chart-2' : 'bg-destructive/10 text-destructive' }`}
+            >
               <span className="text-xl">{item.type === 'income' ? '↑' : '↓'}</span>
             </div>
 
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white">{item.description}</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <h4 className="font-semibold text-foreground">{item.description}</h4>
+              <p className="text-sm text-muted-foreground">
                 {getFrequencyLabel(item.frequency)} • {item.category}
               </p>
             </div>
           </div>
 
           <div className="text-right">
-            <p className="font-semibold text-gray-900 dark:text-white">
+            <p className="font-semibold text-foreground">
               {formatCurrency(item.amount)}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {format(parseISO(item.nextDueDate), 'MMM dd, yyyy')}
             </p>
           </div>
@@ -577,21 +616,57 @@ const UpcomingTransactions = ({ items, getFrequencyLabel }) => {
   );
 };
 
-// Recurring Modal Component (Simplified - would need full implementation)
+// Recurring Modal Component
 const RecurringModal = ({ item, onClose, onSave }) => {
-  const [formData, setFormData] = useState(item || {
-    type: 'expense',
-    category: '',
-    amount: '',
-    description: '',
-    frequency: 'monthly',
-    startDate: new Date().toISOString().split('T')[0],
-    autoGenerate: true
-  });
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(true);
+  const [formData, setFormData] = useState(
+    item
+      ? {
+          ...item,
+          bankId: item.bankId?._id || item.bankId || '',
+          startDate: item.startDate
+            ? new Date(item.startDate).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
+        }
+      : {
+          type: 'expense',
+          category: '',
+          bankId: '',
+          amount: '',
+          description: '',
+          frequency: 'monthly',
+          startDate: new Date().toISOString().split('T')[0],
+          autoGenerate: true,
+        }
+  );
+
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      try {
+        const response = await bankAccountsAPI.getAll();
+        const banks = response.data.data || response.data || [];
+        setBankAccounts(banks);
+        if (!item && banks.length > 0 && !formData.bankId) {
+          setFormData((prev) => ({ ...prev, bankId: banks[0]._id }));
+        }
+      } catch (error) {
+        toast.error('Failed to load bank accounts');
+      } finally {
+        setLoadingBanks(false);
+      }
+    };
+    fetchBankAccounts();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    if (!formData.bankId) {
+      toast.error('Please select a bank account');
+      return;
+    }
+
     try {
       if (item) {
         await recurringAPI.update(item._id, formData);
@@ -610,14 +685,15 @@ const RecurringModal = ({ item, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+      <div className="bg-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-border flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-foreground">
             {item ? 'Edit' : 'Create'} Recurring Transaction
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-background rounded-lg transition-colors"
           >
             <FiX className="w-6 h-6" />
           </button>
@@ -626,44 +702,64 @@ const RecurringModal = ({ item, onClose, onSave }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <p className="block text-sm font-medium text-foreground mb-2">
               Type
-            </label>
+            </p>
             <div className="flex gap-4">
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'income', category: '' })}
-                className={`flex-1 py-3 rounded-lg border-2 transition-all ${
-                  formData.type === 'income'
-                    ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                }`}
+                className={`flex-1 py-3 rounded-lg border-2 transition-all ${ formData.type === 'income' ? 'border-chart-2 bg-chart-2/10 text-chart-2 ' : 'border-border hover:border-border' }`}
               >
                 Income
               </button>
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, type: 'expense', category: '' })}
-                className={`flex-1 py-3 rounded-lg border-2 transition-all ${
-                  formData.type === 'expense'
-                    ? 'border-rose-600 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                }`}
+                className={`flex-1 py-3 rounded-lg border-2 transition-all ${ formData.type === 'expense' ? 'border-destructive bg-destructive/10 text-destructive ' : 'border-border hover:border-border' }`}
               >
                 Expense
               </button>
             </div>
           </div>
 
+          {/* Bank Account */}
+          <div>
+            <label htmlFor="bankId" className="block text-sm font-medium text-foreground mb-2">
+              Bank Account
+            </label>
+            {loadingBanks ? (
+              <div className="w-full px-4 py-2 rounded-lg border border-border bg-card text-muted-foreground">
+                Loading accounts...
+              </div>
+            ) : (
+              <select
+                id="bankId"
+                value={formData.bankId}
+                onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border border-border bg-card focus:ring-2 focus:ring-ring"
+                required
+              >
+                <option value="">Select bank account</option>
+                {bankAccounts.map((bank) => (
+                  <option key={bank._id} value={bank._id}>
+                    {bank.bankName} ({bank.accountNumber})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="category" className="block text-sm font-medium text-foreground mb-2">
               Category
             </label>
             <select
+              id="category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 rounded-lg border border-border bg-card focus:ring-2 focus:ring-ring"
               required
             >
               <option value="">Select category</option>
@@ -677,14 +773,15 @@ const RecurringModal = ({ item, onClose, onSave }) => {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
               Description
             </label>
             <input
+              id="description"
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 rounded-lg border border-border bg-card focus:ring-2 focus:ring-ring"
               placeholder="e.g., Netflix Subscription"
               required
             />
@@ -692,15 +789,16 @@ const RecurringModal = ({ item, onClose, onSave }) => {
 
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="amount" className="block text-sm font-medium text-foreground mb-2">
               Amount
             </label>
             <input
+              id="amount"
               type="number"
               step="0.01"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 rounded-lg border border-border bg-card focus:ring-2 focus:ring-ring"
               placeholder="0.00"
               required
             />
@@ -708,13 +806,14 @@ const RecurringModal = ({ item, onClose, onSave }) => {
 
           {/* Frequency */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="frequency" className="block text-sm font-medium text-foreground mb-2">
               Frequency
             </label>
             <select
+              id="frequency"
               value={formData.frequency}
               onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 rounded-lg border border-border bg-card focus:ring-2 focus:ring-ring"
               required
             >
               <option value="daily">Daily</option>
@@ -728,14 +827,15 @@ const RecurringModal = ({ item, onClose, onSave }) => {
 
           {/* Start Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="startDate" className="block text-sm font-medium text-foreground mb-2">
               Start Date
             </label>
             <input
+              id="startDate"
               type="date"
               value={formData.startDate}
               onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 rounded-lg border border-border bg-card focus:ring-2 focus:ring-ring"
               required
             />
           </div>
@@ -747,9 +847,9 @@ const RecurringModal = ({ item, onClose, onSave }) => {
               id="autoGenerate"
               checked={formData.autoGenerate}
               onChange={(e) => setFormData({ ...formData, autoGenerate: e.target.checked })}
-              className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+              className="w-4 h-4 text-primary rounded-sm focus:ring-ring"
             />
-            <label htmlFor="autoGenerate" className="text-sm text-gray-700 dark:text-gray-300">
+            <label htmlFor="autoGenerate" className="text-sm text-foreground">
               Automatically generate transactions
             </label>
           </div>
@@ -759,13 +859,13 @@ const RecurringModal = ({ item, onClose, onSave }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-background transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-gradient-primary text-white rounded-lg hover:shadow-lg transition-all"
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-primary to-chart-3 text-white rounded-lg hover:shadow-lg transition-all"
             >
               {item ? 'Update' : 'Create'}
             </button>

@@ -42,7 +42,9 @@ class RecurringDetector {
     
     // Get existing recurring transactions to avoid duplicates
     const existingRecurring = await RecurringTransaction.find({ userId });
-    const existingDescriptions = new Set(existingRecurring.map(r => r.description.toLowerCase()));
+    const existingDescriptions = new Set(
+      existingRecurring.map(r => (r.description || '').toLowerCase())
+    );
     
     // Group transactions by potential recurring patterns
     const patterns = this.groupByPatterns(transactions);
@@ -52,7 +54,7 @@ class RecurringDetector {
     
     for (const pattern of patterns) {
       // Skip if already exists
-      if (existingDescriptions.has(pattern.description.toLowerCase())) {
+      if (existingDescriptions.has((pattern.description || '').toLowerCase())) {
         continue;
       }
       
@@ -112,17 +114,19 @@ class RecurringDetector {
    */
   getPatternKey(transaction) {
     // Normalize description (remove numbers, dates, etc.)
-    const normalizedDesc = transaction.description
+    const normalizedDesc = (transaction.description || '')
       .toLowerCase()
       .replace(/\d+/g, '') // Remove numbers
       .replace(/[^\w\s]/g, '') // Remove special chars
       .trim()
       .substring(0, 20); // Take first 20 chars
+    const categoryKey = (transaction.category || 'uncategorized').toLowerCase();
+    const descriptionKey = normalizedDesc || categoryKey;
     
     // Round amount to nearest 10 for grouping
     const roundedAmount = Math.round(transaction.amount / 10) * 10;
     
-    return `${normalizedDesc}_${transaction.category}_${roundedAmount}`;
+    return `${descriptionKey}_${categoryKey}_${roundedAmount}`;
   }
 
   /**
@@ -351,7 +355,7 @@ class RecurringDetector {
       minAmount: pattern.minAmount,
       maxAmount: pattern.maxAmount,
       status: 'active',
-      autoGenerate: false // Don't auto-generate until user approves
+      autoGenerate: true // User explicitly approved this pattern
     });
     
     return recurring;
