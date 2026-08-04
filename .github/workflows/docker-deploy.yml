@@ -17,10 +17,10 @@ jobs:
   build-frontend:
     name: Build & Push Frontend
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.modified, 'frontend/package.json') ||
-      contains(github.event.head_commit.added, 'frontend/package.json')
+    # NOTE: job-level conditions removed — the workflow-level 'paths' filter
+    # already limits this workflow to package.json changes, and
+    # github.event.head_commit.modified was not reliably populated, causing
+    # every push-triggered run to be skipped.
     
     steps:
       - name: Checkout repository
@@ -81,10 +81,7 @@ jobs:
   build-backend:
     name: Build & Push Backend
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.modified, 'backend/package.json') ||
-      contains(github.event.head_commit.added, 'backend/package.json')
+    # NOTE: job-level conditions removed — same reason as build-frontend.
     
     steps:
       - name: Checkout repository
