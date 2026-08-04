@@ -13,6 +13,230 @@ const googleClient = new OAuth2Client(
   process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback'
 );
 
+// @route   POST /api/auth/signup
+// @desc    Register a new user with email & password
+// @access  Public
+router.post('/signup', [
+  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('email').isEmail().withMessage('Please include a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], validate, async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (user) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists'
+      });
+    }
+
+    user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      monthlyBudgetLimit: 50000,
+    });
+
+    req.session.userId = user._id.toString();
+
+    req.session.save((err) => {
+      if (err) {
+        logger.error('Session save error on signup', err);
+        return res.status(500).json({ success: false, message: 'Session error' });
+      }
+      res.status(201).json({
+        success: true,
+        message: 'Account created successfully',
+        sessionId: req.sessionID,
+        data: {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            preferences: user.preferences,
+            monthlyBudgetLimit: user.monthlyBudgetLimit
+          }
+        }
+      });
+    });
+  } catch (error) {
+    logger.error('Signup error', error);
+    res.status(500).json({ success: false, message: 'Server error during signup' });
+  }
+});
+
+// @route   POST /api/auth/login
+// @desc    Authenticate user & get session
+// @access  Public
+router.post('/login', [
+  body('email').isEmail().withMessage('Please include a valid email'),
+  body('password').notEmpty().withMessage('Password is required')
+], validate, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    req.session.userId = user._id.toString();
+
+    req.session.save((err) => {
+      if (err) {
+        logger.error('Session save error on login', err);
+        return res.status(500).json({ success: false, message: 'Session error' });
+      }
+      res.json({
+        success: true,
+        message: 'Logged in successfully',
+        sessionId: req.sessionID,
+        data: {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            preferences: user.preferences,
+            monthlyBudgetLimit: user.monthlyBudgetLimit
+          }
+        }
+      });
+    });
+  } catch (error) {
+    logger.error('Login error', error);
+    res.status(500).json({ success: false, message: 'Server error during login' });
+  }
+});
+
+// @route   POST /api/auth/demo
+// @desc    Instant 1-Click Guest / Demo Login
+// @access  Public
+router.post('/demo', async (req, res) => {
+  try {
+    const demoEmail = 'demo@budgettracker.app';
+    let user = await User.findOne({ email: demoEmail });
+
+    if (!user) {
+      user = await User.create({
+        name: 'Demo User',
+        email: demoEmail,
+        monthlyBudgetLimit: 60000,
+        preferences: { darkMode: true, currency: 'INR' }
+      });
+      
+      try {
+        const BankAccount = require('../models/BankAccount');
+        const Transaction = require('../models/Transaction');
+        
+        const primaryBank = await BankAccount.create({
+          userId: user._id,
+          name: 'HDFC Savings Account',
+          accountNumber: '•••• 4821',
+          bankName: 'HDFC Bank',
+          accountType: 'savings',
+          balance: 145200,
+          isPrimary: true,
+          color: '#6366f1'
+        });
+
+        const secondaryBank = await BankAccount.create({
+          userId: user._id,
+          name: 'ICICI Salary Account',
+          accountNumber: '•••• 8912',
+          bankName: 'ICICI Bank',
+          accountType: 'checking',
+          balance: 82400,
+          isPrimary: false,
+          color: '#10b981'
+        });
+
+        await Transaction.create([
+          {
+            userId: user._id,
+            bankAccountId: primaryBank._id,
+            type: 'income',
+            amount: 85000,
+            category: 'Salary',
+            description: 'Monthly Salary Credit',
+            date: new Date(Date.now() - 86400000 * 2),
+          },
+          {
+            userId: user._id,
+            bankAccountId: primaryBank._id,
+            type: 'expense',
+            amount: 14500,
+            category: 'Groceries & Supplies',
+            description: 'Supermarket Superstore',
+            date: new Date(Date.now() - 86400000 * 1),
+          },
+          {
+            userId: user._id,
+            bankAccountId: secondaryBank._id,
+            type: 'expense',
+            amount: 3200,
+            category: 'Dining Out',
+            description: 'Gourmet Bistro Cafe',
+            date: new Date(),
+          },
+          {
+            userId: user._id,
+            bankAccountId: primaryBank._id,
+            type: 'income',
+            amount: 12500,
+            category: 'Freelance',
+            description: 'Web Design Project',
+            date: new Date(Date.now() - 86400000 * 5),
+          }
+        ]);
+      } catch (seedErr) {
+        logger.warn('Demo seeding notice:', seedErr.message);
+      }
+    }
+
+    req.session.userId = user._id.toString();
+
+    req.session.save((err) => {
+      if (err) {
+        logger.error('Session save error on demo login', err);
+        return res.status(500).json({ success: false, message: 'Session error' });
+      }
+      res.json({
+        success: true,
+        message: 'Signed in as Demo User',
+        sessionId: req.sessionID,
+        data: {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            preferences: user.preferences,
+            monthlyBudgetLimit: user.monthlyBudgetLimit
+          }
+        }
+      });
+    });
+  } catch (error) {
+    logger.error('Demo auth error', error);
+    res.status(500).json({ success: false, message: 'Error signing in as demo user' });
+  }
+});
+
 // @route   GET /api/auth/google
 // @desc    Initiate Google OAuth
 // @access  Public
@@ -292,19 +516,37 @@ router.get('/session', async (req, res) => {
 });
 
 // @route   POST /api/auth/signout
-// @desc    Sign out user
+// @desc    Sign out user (destroys both cookie session and custom-header session)
 // @access  Public
 router.post('/signout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Error signing out'
+  const customSessionId = req.headers['x-session-id'];
+
+  // Destroy the custom-header session if provided (cross-domain fallback)
+  const destroyCustomSession = () => {
+    if (!customSessionId) return Promise.resolve();
+    return new Promise((resolve) => {
+      req.sessionStore.destroy(customSessionId, (err) => {
+        if (err) logger.warn('Failed to destroy custom session', { customSessionId });
+        resolve();
       });
-    }
-    res.json({
-      success: true,
-      message: 'Signed out successfully'
+    });
+  };
+
+  destroyCustomSession().then(() => {
+    // Destroy the cookie-based session (if any)
+    req.session.destroy((err) => {
+      if (err) {
+        logger.error('Error destroying session', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error signing out'
+        });
+      }
+      res.clearCookie('budget.sid');
+      res.json({
+        success: true,
+        message: 'Signed out successfully'
+      });
     });
   });
 });
@@ -325,13 +567,16 @@ router.get('/me', protect, async (req, res) => {
 
     res.json({
       success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        preferences: user.preferences,
-        monthlyBudgetLimit: user.monthlyBudgetLimit
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          emailVerified: user.emailVerified,
+          preferences: user.preferences,
+          monthlyBudgetLimit: user.monthlyBudgetLimit
+        }
       }
     });
   } catch (error) {
@@ -366,13 +611,15 @@ router.put('/profile', protect, [
 
     res.json({
       success: true,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        preferences: user.preferences,
-        monthlyBudgetLimit: user.monthlyBudgetLimit
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          preferences: user.preferences,
+          monthlyBudgetLimit: user.monthlyBudgetLimit
+        }
       }
     });
   } catch (error) {

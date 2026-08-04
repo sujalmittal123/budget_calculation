@@ -52,18 +52,22 @@ const BankAccountSchema = new mongoose.Schema({
   }
 });
 
-// Mask account number for display
-BankAccountSchema.methods.getMaskedAccountNumber = function() {
-  const accountNum = this.accountNumber;
+// Helper to mask an account number (handles missing values, e.g. populated
+// documents where only a subset of fields was selected)
+const maskAccountNumber = (accountNum) => {
+  if (!accountNum || typeof accountNum !== 'string' || accountNum.length === 0) return '';
   if (accountNum.length <= 4) return accountNum;
   return '*'.repeat(accountNum.length - 4) + accountNum.slice(-4);
 };
 
+// Mask account number for display
+BankAccountSchema.methods.getMaskedAccountNumber = function() {
+  return maskAccountNumber(this.accountNumber);
+};
+
 // Virtual for masked account number
 BankAccountSchema.virtual('maskedAccountNumber').get(function() {
-  const accountNum = this.accountNumber;
-  if (accountNum.length <= 4) return accountNum;
-  return '*'.repeat(accountNum.length - 4) + accountNum.slice(-4);
+  return maskAccountNumber(this.accountNumber);
 });
 
 // Ensure virtuals are included in JSON output

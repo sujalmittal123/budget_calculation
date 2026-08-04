@@ -39,7 +39,14 @@ class RecurringDetector {
     if (transactions.length < this.MIN_OCCURRENCES) {
       return [];
     }
-    
+
+    // Recurring templates require a bank account, so cash transactions
+    // (bankId === null) cannot be turned into recurring transactions.
+    const bankedTransactions = transactions.filter(t => t.bankId);
+    if (bankedTransactions.length < this.MIN_OCCURRENCES) {
+      return [];
+    }
+
     // Get existing recurring transactions to avoid duplicates
     const existingRecurring = await RecurringTransaction.find({ userId });
     const existingDescriptions = new Set(
@@ -47,7 +54,7 @@ class RecurringDetector {
     );
     
     // Group transactions by potential recurring patterns
-    const patterns = this.groupByPatterns(transactions);
+    const patterns = this.groupByPatterns(bankedTransactions);
     
     // Analyze each pattern
     const detectedPatterns = [];
@@ -332,6 +339,15 @@ class RecurringDetector {
    * Create recurring transactions from detected patterns
    */
   async createFromPattern(userId, pattern) {
+    if (!pattern.bankId) {
+      const error = new Error(
+        'This pattern cannot be approved because it has no bank account. ' +
+        'Only transactions linked to a bank account can become recurring.'
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
     const recurring = await RecurringTransaction.create({
       userId,
       bankId: pattern.bankId,

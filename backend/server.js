@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const mongoSanitize = require('express-mongo-sanitize');
+const fs = require('fs');
 const logger = require('./utils/logger');
 
 // Import rate limiters
@@ -24,6 +25,12 @@ const dailyNotesRoutes = require('./routes/dailyNotes');
 const recurringTransactionsRoutes = require('./routes/recurringTransactions');
 
 const app = express();
+
+// Ensure the uploads directory exists (used by CSV import)
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
+  logger.info('Created uploads directory');
+}
 
 // Trust proxy
 app.set('trust proxy', 1);
@@ -123,7 +130,7 @@ app.use('/api/recurring', recurringTransactionsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Budget Tracker API is running' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Error handling
@@ -140,11 +147,6 @@ app.use((err, req, res, next) => {
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
-});
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Status page to verify authentication

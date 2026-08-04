@@ -113,9 +113,16 @@ TransactionSchema.post('findOneAndDelete', async function(doc) {
 // Static method to recalculate bank balance
 TransactionSchema.statics.updateBankBalance = async function(bankId) {
   const BankAccount = require('./BankAccount');
-  
+
+  // Aggregate $match does NOT cast string ids to ObjectId, so coerce it here.
+  // (Routes pass req.body.bankId which arrives as a string — without this
+  // the match finds nothing and the balance is wrongly reset to initial.)
+  const bankObjectId = (typeof bankId === 'string')
+    ? new mongoose.Types.ObjectId(bankId)
+    : bankId;
+
   const result = await this.aggregate([
-    { $match: { bankId: bankId } },
+    { $match: { bankId: bankObjectId } },
     {
       $group: {
         _id: null,
@@ -133,7 +140,7 @@ TransactionSchema.statics.updateBankBalance = async function(bankId) {
     }
   ]);
 
-  const bankAccount = await BankAccount.findById(bankId);
+  const bankAccount = await BankAccount.findById(bankObjectId);
   if (bankAccount) {
     const totals = result[0] || { totalIncome: 0, totalExpense: 0 };
     bankAccount.balance = bankAccount.initialBalance + totals.totalIncome - totals.totalExpense;

@@ -106,6 +106,72 @@ export const useAuth = () => {
   };
 
   /**
+   * Sign in with Email and Password
+   */
+  const signInWithEmail = async (email, password) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await authService.signInWithEmail(email, password);
+      if (res.data && res.data.user) {
+        setSession(res.data);
+        toast.success('Welcome back!');
+        return res.data.user;
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to sign in');
+      toast.error(err.message || 'Failed to sign in');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Sign up with Email, Name & Password
+   */
+  const signUpWithEmail = async (name, email, password) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await authService.signUpWithEmail(name, email, password);
+      if (res.data && res.data.user) {
+        setSession(res.data);
+        toast.success('Account created successfully!');
+        return res.data.user;
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to sign up');
+      toast.error(err.message || 'Failed to sign up');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Instant 1-Click Demo Sign In
+   */
+  const signInAsDemo = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await authService.signInAsDemo();
+      if (res.data && res.data.user) {
+        setSession(res.data);
+        toast.success('Signed in as Demo User');
+        return res.data.user;
+      }
+    } catch (err) {
+      setError(err.message || 'Demo sign-in failed');
+      toast.error(err.message || 'Demo sign-in failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Sign out
    */
   const logout = async () => {
@@ -159,14 +225,14 @@ export const useAuth = () => {
       // Call API to update profile
       const response = await authAPI.updateProfile(updates);
 
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
         // Update local state
-        updateUserProfile(response.data.data);
+        updateUserProfile(response.data.data.user);
 
         // Refresh session to sync
         await refreshSession();
 
-        return response.data.data;
+        return response.data.data.user;
       }
 
       throw new Error('Failed to update profile');
@@ -188,6 +254,9 @@ export const useAuth = () => {
 
     // Actions
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    signInAsDemo,
     logout,
     refreshSession,
     updateProfile,

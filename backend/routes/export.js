@@ -5,6 +5,14 @@ const Transaction = require('../models/Transaction');
 const BankAccount = require('../models/BankAccount');
 const { protect } = require('../middleware/auth');
 
+// Currency symbols by code (used for PDF formatting)
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  INR: '₹',
+  EUR: '€',
+  GBP: '£',
+};
+
 // All routes are protected
 router.use(protect);
 
@@ -91,6 +99,11 @@ router.get('/report/pdf', async (req, res) => {
       isActive: true
     });
 
+    // Use the user's preferred currency (defaults to USD)
+    const currencyCode = req.user.preferences?.currency || 'USD';
+    const currencySymbol = CURRENCY_SYMBOLS[currencyCode] || '$';
+    const formatAmount = (value) => `${currencySymbol}${Number(value || 0).toFixed(2)}`;
+
     // Create PDF
     const doc = new PDFDocument({ margin: 50 });
 
@@ -112,9 +125,9 @@ router.get('/report/pdf', async (req, res) => {
     doc.moveDown(0.5);
     
     doc.fontSize(12).font('Helvetica');
-    doc.text(`Total Income: $${summary.income.toFixed(2)}`, { continued: false });
-    doc.text(`Total Expenses: $${summary.expense.toFixed(2)}`);
-    doc.text(`Net Balance: $${(summary.income - summary.expense).toFixed(2)}`);
+    doc.text(`Total Income: ${formatAmount(summary.income)}`, { continued: false });
+    doc.text(`Total Expenses: ${formatAmount(summary.expense)}`);
+    doc.text(`Net Balance: ${formatAmount(summary.income - summary.expense)}`);
     doc.moveDown(1.5);
 
     // Bank Accounts Section
@@ -123,7 +136,7 @@ router.get('/report/pdf', async (req, res) => {
     
     doc.fontSize(12).font('Helvetica');
     bankAccounts.forEach(bank => {
-      doc.text(`${bank.bankName} (${bank.accountType}): $${bank.balance.toFixed(2)}`);
+      doc.text(`${bank.bankName} (${bank.accountType}): ${formatAmount(bank.balance)}`);
     });
     doc.moveDown(1.5);
 
@@ -140,7 +153,7 @@ router.get('/report/pdf', async (req, res) => {
     
     doc.fontSize(12).font('Helvetica');
     Object.entries(categoryTotals).forEach(([category, total]) => {
-      doc.text(`${category.charAt(0).toUpperCase() + category.slice(1)}: $${total.toFixed(2)}`);
+      doc.text(`${category.charAt(0).toUpperCase() + category.slice(1)}: ${formatAmount(total)}`);
     });
     doc.moveDown(1.5);
 
@@ -180,7 +193,7 @@ router.get('/report/pdf', async (req, res) => {
       xPos += colWidths[1];
       doc.text(t.category, xPos, rowY, { width: colWidths[2] });
       xPos += colWidths[2];
-      doc.text(`$${t.amount.toFixed(2)}`, xPos, rowY, { width: colWidths[3] });
+      doc.text(`${formatAmount(t.amount)}`, xPos, rowY, { width: colWidths[3] });
       xPos += colWidths[3];
       doc.text((t.description || '').substring(0, 30), xPos, rowY, { width: colWidths[4] });
       

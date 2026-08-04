@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const RecurringTransaction = require('../models/RecurringTransaction');
 const Transaction = require('../models/Transaction');
+const BankAccount = require('../models/BankAccount');
 const recurringDetector = require('../services/recurringDetector');
 const { protect } = require('../middleware/auth');
 
@@ -98,9 +99,9 @@ router.post('/detect/approve', async (req, res) => {
     });
   } catch (error) {
     console.error('Error approving pattern:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Error creating recurring transaction from pattern',
+      message: error.statusCode ? error.message : 'Error creating recurring transaction from pattern',
       error: error.message
     });
   }
@@ -166,6 +167,29 @@ router.post('/', async (req, res) => {
       userId: req.user.id
     };
     
+    // If bankId comes in as a populated object (older frontend builds send
+    // the whole bank document), normalize it to just the id.
+    if (recurringData.bankId && typeof recurringData.bankId === 'object') {
+      recurringData.bankId = recurringData.bankId._id || recurringData.bankId.id || null;
+    }
+
+    // If bankId is missing, fall back to the user's first active bank account
+    // (matches the frontend behavior of auto-selecting the first bank).
+    if (!recurringData.bankId) {
+      const firstBank = await BankAccount.findOne({
+        userId: req.user.id,
+        isActive: true
+      }).sort({ createdAt: 1 });
+      
+      if (!firstBank) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please add a bank account before creating a recurring transaction'
+        });
+      }
+      recurringData.bankId = firstBank._id;
+    }
+
     // Validate required fields
     const requiredFields = ['type', 'category', 'amount', 'description', 'frequency', 'startDate', 'bankId'];
     const missingFields = requiredFields.filter(field => !recurringData[field]);
@@ -182,6 +206,19 @@ router.post('/', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid startDate'
+      });
+    }
+
+    // Verify the bank account belongs to the user
+    const bankAccount = await BankAccount.findOne({
+      _id: recurringData.bankId,
+      userId: req.user.id,
+      isActive: true
+    });
+    if (!bankAccount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bank account not found. Please select a valid bank account.'
       });
     }
 
@@ -232,6 +269,27 @@ router.put('/:id', async (req, res) => {
     const previousFrequency = recurring.frequency;
     const previousDayOfMonth = recurring.dayOfMonth;
     const previousDayOfWeek = recurring.dayOfWeek;
+    
+    // Normalize bankId: older frontend builds may send the whole populated
+    // bank document instead of just the id.
+    if (req.body.bankId && typeof req.body.bankId === 'object') {
+      req.body.bankId = req.body.bankId._id || req.body.bankId.id || null;
+    }
+    
+    // If the bank account is being changed, make sure it belongs to the user
+    if (req.body.bankId) {
+      const bankAccount = await BankAccount.findOne({
+        _id: req.body.bankId,
+        userId: req.user.id,
+        isActive: true
+      });
+      if (!bankAccount) {
+        return res.status(400).json({
+          success: false,
+          message: 'Bank account not found. Please select a valid bank account.'
+        });
+      }
+    }
     
     // Update fields
     Object.keys(req.body).forEach(key => {
@@ -497,7 +555,6 @@ router.post('/batch/approve', async (req, res) => {
     });
   }
 });
-
 // DELETE /api/recurring/batch/delete - Delete multiple recurring transactions
 router.delete('/batch/delete', async (req, res) => {
   try {

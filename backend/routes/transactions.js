@@ -12,6 +12,14 @@ const { validate } = require('../middleware/validate');
 // Configure multer for CSV upload
 const upload = multer({ dest: 'uploads/' });
 
+// Valid categories from the Transaction model (kept in sync automatically)
+const VALID_CATEGORIES = Transaction.schema.path('category').enumValues;
+// Case-insensitive lookup: 'food & dining' -> 'Food & Dining'
+const CATEGORY_LOOKUP = Object.fromEntries(
+  VALID_CATEGORIES.map(c => [c.toLowerCase(), c])
+);
+const VALID_PAYMENT_METHODS = Transaction.schema.path('paymentMethod').enumValues;
+
 // All routes are protected
 router.use(protect);
 
@@ -45,7 +53,7 @@ router.get('/', async (req, res) => {
     }
 
     // Category filter
-    if (category && ['personal', 'business'].includes(category)) {
+    if (category) {
       queryObj.category = category;
     }
 
@@ -212,10 +220,10 @@ router.post('/', [
 router.put('/:id', [
   param('id').isMongoId().withMessage('Invalid transaction ID'),
   body('type').optional().isIn(['income', 'expense']),
-  body('category').optional().isIn(['personal', 'business']),
+  body('category').optional().isIn(VALID_CATEGORIES).withMessage('Invalid category'),
   body('amount').optional().isFloat({ min: 0.01 }),
   body('date').optional().isISO8601(),
-  body('paymentMethod').optional().isIn(['cash', 'card', 'upi', 'bank_transfer', 'cheque', 'other'])
+  body('paymentMethod').optional().isIn(VALID_PAYMENT_METHODS)
 ], validate, async (req, res) => {
   try {
     let transaction = await Transaction.findOne({
@@ -232,8 +240,11 @@ router.put('/:id', [
 
     const { type, category, subcategory, amount, paymentMethod, description, date, tags } = req.body;
 
-    // If bankId is changing, verify new bank account
-    if (req.body.bankId && req.body.bankId !== transaction.bankId.toString()) {
+    // Track the old bank account (may be null for cash transactions)
+    const oldBankId = transaction.bankId ? transaction.bankId.toString() : null;
+
+    // If bankId is changing, verify the new bank account
+    if (req.body.bankId && req.body.bankId !== oldBankId) {
       const bankAccount = await BankAccount.findOne({
         _id: req.body.bankId,
         userId: req.user.id,
@@ -247,8 +258,6 @@ router.put('/:id', [
         });
       }
     }
-
-    const oldBankId = transaction.bankId;
 
     // Update transaction
     const updateData = {};
@@ -268,9 +277,15 @@ router.put('/:id', [
       { new: true, runValidators: true }
     ).populate('bankId', 'bankName color balance');
 
-    // Update bank balances
-    await Transaction.updateBankBalance(transaction.bankId._id);
-    if (req.body.bankId && oldBankId.toString() !== req.body.bankId) {
+    // Update bank balances (only for accounts that actually exist)
+    const newBankId = transaction.bankId
+      ? (transaction.bankId._id || transaction.bankId).toString()
+      : null;
+
+    if (newBankId) {
+      await Transaction.updateBankBalance(newBankId);
+    }
+    if (oldBankId && req.body.bankId && oldBankId !== newBankId) {
       await Transaction.updateBankBalance(oldBankId);
     }
 
@@ -282,6 +297,57 @@ router.put('/:id', [
     res.status(500).json({
       success: false,
       message: 'Error updating transaction',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/transactions/bulk
+// @desc    Delete multiple transactions
+// @access  Private
+// NOTE: Must be registered BEFORE /:id so 'bulk' isn't treated as an ID
+router.delete('/bulk', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide transaction IDs'
+      });
+    }
+
+    // Get affected bank accounts
+    const transactions = await Transaction.find({
+      _id: { $in: ids },
+      userId: req.user.id
+    });
+
+    const bankIds = [...new Set(
+      transactions
+        .filter(t => t.bankId)
+        .map(t => t.bankId.toString())
+    )];
+
+    // Delete transactions
+    const result = await Transaction.deleteMany({
+      _id: { $in: ids },
+      userId: req.user.id
+    });
+
+    // Update bank balances
+    for (const bankId of bankIds) {
+      await Transaction.updateBankBalance(bankId);
+    }
+
+    res.json({
+      success: true,
+      message: `Deleted ${result.deletedCount} transactions`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting transactions',
       error: error.message
     });
   }
@@ -365,21 +431,31 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
     for await (const row of parser) {
       try {
         // Expected columns: date, type, category, amount, description, paymentMethod
+        const rawType = (row.type || row.Type || 'expense').toLowerCase();
+        const rawCategory = (row.category || row.Category || '').toLowerCase();
+        const rawPaymentMethod = (row.paymentMethod || row.payment_method || 'card').toLowerCase();
+
+        // Map category case-insensitively to the model's enum values
+        const category = CATEGORY_LOOKUP[rawCategory] || rawCategory;
+        const paymentMethod = VALID_PAYMENT_METHODS.includes(rawPaymentMethod)
+          ? rawPaymentMethod
+          : 'card';
+
         const transactionData = {
           userId: req.user.id,
           bankId,
           date: new Date(row.date || row.Date || Date.now()),
-          type: (row.type || row.Type || 'expense').toLowerCase(),
-          category: (row.category || row.Category || 'personal').toLowerCase(),
+          type: rawType,
+          category,
           amount: parseFloat(row.amount || row.Amount || 0),
           description: row.description || row.Description || '',
-          paymentMethod: (row.paymentMethod || row.payment_method || 'card').toLowerCase()
+          paymentMethod
         };
 
         // Validate
         if (transactionData.amount > 0 && 
             ['income', 'expense'].includes(transactionData.type) &&
-            ['personal', 'business'].includes(transactionData.category)) {
+            VALID_CATEGORIES.includes(category)) {
           transactions.push(transactionData);
         } else {
           errors.push({ row, reason: 'Invalid data' });
@@ -413,52 +489,6 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error importing CSV',
-      error: error.message
-    });
-  }
-});
-
-// @route   DELETE /api/transactions/bulk
-// @desc    Delete multiple transactions
-// @access  Private
-router.delete('/bulk', async (req, res) => {
-  try {
-    const { ids } = req.body;
-
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide transaction IDs'
-      });
-    }
-
-    // Get affected bank accounts
-    const transactions = await Transaction.find({
-      _id: { $in: ids },
-      userId: req.user.id
-    });
-
-    const bankIds = [...new Set(transactions.map(t => t.bankId.toString()))];
-
-    // Delete transactions
-    const result = await Transaction.deleteMany({
-      _id: { $in: ids },
-      userId: req.user.id
-    });
-
-    // Update bank balances
-    for (const bankId of bankIds) {
-      await Transaction.updateBankBalance(bankId);
-    }
-
-    res.json({
-      success: true,
-      message: `Deleted ${result.deletedCount} transactions`
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting transactions',
       error: error.message
     });
   }
